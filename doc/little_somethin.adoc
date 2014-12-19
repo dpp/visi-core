@@ -1,0 +1,135 @@
+= Visi: Taking it to the Users
+:Author:    David Pollak
+:Email:     d@visi.pro
+:Date:      October 29, 2014
+
+== Intro
+
+On October 17th, 2014, I published a video demonstrating Visi... my take
+on allowing non-self-identified programmers access Big Data.
+
+This document is a brief overview of the workflow I think spreadsheet
+users would like to have with Big Data as well as the overview of a system
+that will allow spreadsheet jocks to play with big data **and** take
+home JAR files that they can run on their own Hadoop and Spark instances.
+
+== Workflow
+
+User workflow is very important. A fluid workflow for setting up a model will result in good models.
+A workflow with lots of delays and interuptions will lead to models that are minimally useful, but
+will not be optimal.
+
+When spreadsheet users build a model (or modify an existing model), they iterate very quickly.
+They _explore_ the intersection of the data they are analyzing and the formulas. Thus the spreadsheet
+user can very quickly get to the formulas that reflect their "gut feel".
+
+Here's an ideal workflow for a big data user:
+
+[graphviz]
+----
+
+digraph Workflow {
+  compound=true;
+  subgraph explore {
+
+
+  load [label="Load Sample Data"];
+
+  formula [label="Enter Formulas"];
+
+  view [label="View results and charts"];
+
+  load -> formula -> view -> formula;
+  }
+
+  Publish [label="Publish\nRun Against full data set and\nreal-time data\nSimple Mobile App"];
+  
+  view -> Publish -> Update -> formula;
+
+  Publish -> Decide;
+}
+
+----
+
+=== Load
+
+The first step is to load sample data. This may mean uploading a sample data set,
+identifying files that represent a subset of the data to be analyzed, or using
+Spark's `sample()` function to take a subset of the data. Why do you want a
+subset? Because operating on a multi terabyte data set will take a long time,
+and the longer it takes to see the results of a formula, the less interactive/iterative
+the development process will be.
+
+=== Formulas & View
+
+The next step is to apply formulas to the data samples and see what happens.
+This is an iterative and highly interactive process. The user types a formula
+and looks at the result. Maybe the user changes the formula or maybe the user
+takes the result and applies another formula to it.
+
+The user will repeat this process until the results "feel" right to the user.
+
+=== Publish
+
+Once the user feels right about the formulas, they will Publish the
+code. What is publishing? Some combination of:
+
+* Running the code against a huge data set.
+* Setting the code up to run periodically or against a combination of streaming and historical data and...
+** Generating periodic reports (PDFs, PowerPoint slides, etc.)
+** Generating alert events when certain thresholds have been crossed.
+* Making the data available on a simple mobile app (e.g., SalesForce's Wave) so the user sees top-level graphs, maybe can drill into the data that resulted in the graph, and take simple actions.
+
+=== Decide
+
+Based on the analysis of the data, the recipient of the analitics can make a decision and take action.
+
+Also, based on the results, there may be a cycle back to the Formula & View phase to refine the model.
+
+== Compared to Current Hadoop/Spark workflow
+
+The current big data workflow lacks the iterative phase. There may be a many day to many
+week gap for each cycle in the iteration of the model. This means that the model will not be
+as refined as it would be if the business user is the one creating the model.
+Also, the business person doesn't "own" the model... it's a weird compromise among
+business owners and data scientists. This increases politics around the model and
+that is a distraction from the core business goals.
+
+== What can we build?
+
+So, the Visi demo video hit a lot of people "just right." I think giving people
+the ability to build their own models in Visi without making the open sourcing
+choice is a reasonable next step.
+
+So, if we look at the above workflow, we can build an online tool where users
+can load (upload data or point to URLs or maybe data in private GitHub repos),
+repeatedly apply formulas to the data, and then get a JAR file that they can then
+run on their own Hadoop/Spark cluster will allow people to play with Visi. And
+not just Data Scientist people, but line of business people. And if we can get
+demand from those people, that can lead to revenue. It's also a tool that
+is hellishly good demo.
+
+So, what do we need:
+
+* A system that users can sign up for an account and do some form of verification (email click-through?)
+* Optionally associate the account with a GitHub account so we can pull data from GitHub
+* Optionally associate the account with Twitter so they can do some streaming Tweet stuff
+* Places to store other credentials (e.g. Twilio)
+* Each account can have multiple Notebooks:
+** Each notebook can have up to 2GB of data associated with it. The data can be uploaded, come from files in GitHub repos, or come from URLs
+** Each notebook is targetted at either Hadoop or Spark
+** Each notebook can have dependent JAR files that are publicly accessible via Maven (we can use lein under the covers) or JAR files in a GitHub repo
+** When users fire up a notebook, they get their own Spark or Hadoop instance and can play with their data within the notebook
+** Each notebook will be versioned (git in the background?) so they can go back and see what they did
+** When they are ready, they push the "publish as a JAR" button and they get a JAR file that will run on their Hadoop or Spark cluster
+
+In addition to the "blinking cursor" above, I think we need:
+
+* something like Dean Wampler's Spark course as notebooks people can clone so they have a place to start
+* a mechanism to publish public notebooks for other people to use (make it social)
+* written documentation/tutorials
+* screencasts
+* a reasonable in-Notebook (REPL) help system, sane error reporting system, and function builder
+
+
+

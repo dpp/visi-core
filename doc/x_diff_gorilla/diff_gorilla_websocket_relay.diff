@@ -1,0 +1,43 @@
+diff -i -E -b -w -B /home/xah/git/dpp/visi/src/gorilla_repl_original/websocket_relay.clj /home/xah/git/dpp/visi/src/gorilla_repl/websocket_relay.clj
+14a15,42
+> (def connection-count (atom 0))
+> 
+> (def clock (atom 0))
+> 
+> (add-watch
+>  connection-count :foo
+>  (fn [k r os ns]
+>    (when (= 0 ns)
+>      (let [cur-clock @clock]
+>        (.start
+>         (Thread.
+>          (reify Runnable
+>            (run [_]
+>              (Thread/sleep 30000)
+>              (if (= cur-clock @clock)
+>                (System/exit 0)
+>                )))))))))
+> 
+> (let [cur-clock @clock]
+>   (.start
+>    (Thread.
+>     (reify Runnable
+>       (run [_]
+>         (Thread/sleep 300000)
+>         (if (= cur-clock @clock)
+>           (System/exit 0)
+>           ))))))
+> 
+33c61,64
+<         replies (nrepl/message client parsed-message)]
+---
+>         replies
+>         (if (= "ping" (-> parsed-message :op))
+>           (nrepl/message client (assoc parsed-message :op "eval" :code "nil" :ignore "yes"))
+>           (nrepl/message client parsed-message))]
+44a76,78
+>     (swap! connection-count inc)
+>     (swap! clock inc)
+>     (server/on-close channel (fn [& _] (swap! connection-count dec)))
+
+Diff finished.  Sun Nov 16 05:54:12 2014

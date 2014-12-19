@@ -1,0 +1,98 @@
+diff -i -E -b -w -B /home/xah/git/dpp/visi/src/gorilla_repl_original/core.clj /home/xah/git/dpp/visi/src/gorilla_repl/core.clj
+0a1,2
+> (println "gorilla_repl/core.clj called")
+> 
+13a16
+>             [visi.runtime :as v-run]
+94c93,94
+<            (route/files "/project-files" [:root "."]))
+---
+>   ;; (route/files "/project-files" [:root "."])
+>   )
+95a96,120
+> (defn fix-prefix
+>   [{:keys [uri] :as  request}]
+>   (if-let [info (re-find #"^/visi/[^/]*(/.*)$" uri)]
+>     (do
+>       (println "Rewriting " uri " to " (get info 1))
+>      (assoc request :uri (get info 1)))
+>     request
+>     )
+>   )
+> 
+> (defn fix-slash
+>   [{:keys [uri] :as  request}]
+>   (if (.endsWith uri "/")
+>     (assoc request :uri (str uri "index.html"))
+>     request)
+>   )
+> 
+> (defn rw-app-routes
+>   [request]
+>   (-> request fix-prefix fix-slash app-routes)
+>   )
+> 
+> (defn- mk-number
+>   [x]
+>   (if (string? x) (read-string x) x))
+100,102c125,134
+<   (let [version (or (:version conf) "develop")
+<         webapp-requested-port (or (:port conf) 0)
+<         ip (or (:ip conf) "127.0.0.1")
+---
+>   (v-run/set-app-params! conf)
+>   (let [version (or (get conf "version")
+>                     (:version conf) "develop")
+>         webapp-requested-port (mk-number
+>                                (or
+>                                 (get conf "port")
+>                                 (:port conf) 0))
+>         ip (or
+>             (get conf "ip")
+>             (:ip conf) "127.0.0.1")
+104c136,138
+<         project (or (:project conf) "no project")
+---
+>         project (or
+>                  (get conf "project")
+>                  (:project conf) "Visi")
+108d141
+<     (println "Gorilla-REPL:" version)
+113c146
+<     (version/check-for-update version)  ;; runs asynchronously
+---
+>     ;; (version/check-for-update version)  ;; runs asynchronously
+117c150
+<     (let [s (server/run-server #'app-routes {:port webapp-requested-port :join? false :ip ip})
+---
+>     (let [s (server/run-server #'rw-app-routes {:port webapp-requested-port :join? false :ip ip})
+120c153,164
+<       (println (str "Running at http://" ip ":" webapp-port "/worksheet.html ."))
+---
+>       (println (str "Running at http://" ip ":" webapp-port "/"))
+> 
+>       (if-let [touch (get conf "touch")]
+>         (do
+>           (try
+>             (let [fos (java.io.FileOutputStream. (java.io.File.  touch))]
+>               (.write fos (.getBytes "hello" "UTF-8"))
+>               (.close fos)
+>               )
+>             (catch Exception e nil))
+>           ))
+> 
+125c169,178
+<   (run-gorilla-server {:port 8990}))
+---
+>   (run-gorilla-server
+>    (or
+>     (if (and (< 0 (count args))
+>              (even? (count args)))
+>       (do
+>         (mapv #(apply set-config %) (partition 2 args))
+>         (into {} (map (fn [[a b]] [a b]) (partition 2 args))))
+>       )
+>     {:port 8990})))
+> 
+
+Diff finished.  Sun Nov 16 05:16:37 2014
