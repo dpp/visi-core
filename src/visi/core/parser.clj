@@ -7,8 +7,6 @@
 
 ;; note:
 ;; the only functions called outside this file is
-;; (def current-file (atom nil))       called by pkg.clj
-;; (defn pre-process-line              called by middleware.clj
 
 (defn insert-meta
   [res]
@@ -484,38 +482,7 @@ todo: documentation incomplete.
   ([the-line namespace]
    (-> the-line .trim (str "\n") line-parser (post-process namespace))))
 
-;; TODO this function is not called anywhere??
-(defn visi-parse
-"Takes a visi language string, returns a parse tree."
-  [s]
-  (let [sp (if (.endsWith s "\n") s (str s "\n"))]
-    (the-parser sp))
-  )
 
-;; TODO this function is not called anywhere
-(defn serialize-to-file
-  [obj]
-  (let [fos (java.io.FileOutputStream. "dog.ser")
-        oos (java.io.ObjectOutputStream. fos)]
-    (.writeObject oos obj)
-    (.close fos)))
-
-;; TODO this function is not called anywhere
-(defn deserialize-from-file
-  []
-  (try
-    (let [fis (java.io.FileInputStream. "dog.ser")
-          ois (java.io.ObjectInputStream. fis)
-          ret (.readObject ois)]
-      (.close ois)
-      (.close fis)
-      ret)
-    (catch Exception e (.printStackTrace e))
-    ))
-
-(def has-initialized (atom false))
-
-(def current-file (atom nil))
 
 (defn pre-process-line
   "Looks at the line... if it looks like Clojure, pass it through, but if it
@@ -526,20 +493,6 @@ For example, \"x = 3\" returns \"(def x 3)\".
 For example, \"(+ 3 7)\" returns \"(+ 3 7)\".
 "
   [code]
-
-  ;; avoid the circular dependency issue by doing evals
-  (when (not @has-initialized)
-    (reset! has-initialized true)
-    (vu/when-has-resource
-     "gorilla_repl/core.clj"
-     (eval
-      '(require '[gorilla-repl.core]))
-
-     (eval
-      '(defmethod gorilla-repl.core/capture-save
-         :default
-         [content file-name]
-         (reset! visi.parser/current-file (visi.parser/process-notebook content))))))
 
   (let [code (.trim code)]
     (if
