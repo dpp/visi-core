@@ -10,10 +10,6 @@
             "Test visi parser. ConstDef"
             (t/is (= (vp/pre-process-line "x = 3") "(def x 3)"))
             (t/is (= (vp/pre-process-line "x  =   3") "(def x 3)"))
-            ;; (t/is (= (vp/pre-process-line "x= 3") "(def x 3)"))
-            ;; (t/is (= (vp/pre-process-line "x =3") "(def x 3)"))
-            ;; (t/is (= (vp/pre-process-line "x=3") "(def x 3)"))
-
             )
 
            (t/testing
@@ -255,47 +251,3 @@ y */")))
 
            ;;
            )
-
-;; todo. this is error without space
-;; x+1
-;; this is a problem
-
-;; todo. this is error without space
-;; 3^2
-;; this is a problem
-
-;; todo. this is error
-;; hhh = {:aa 7 :b 8}
-;; CompilerException java.lang.RuntimeException: Unable to resolve symbol: hhh in this context, compiling:(/tmp/form-init3541756566004116888.clj:1:113)
-
-            ;; according to java spec http://docs.oracle.com/javase/specs/jls/se8/html/jls-3.html#jls-EscapeSequence
-;; It is a compile-time error if the character following a backslash in an escape sequence is not an ASCII b, t, n, f, r, ", ', \, 0, 1, 2, 3, 4, 5, 6, or 7. The Unicode escape \u is processed earlier (§3.3).
-            ;; clojure's string syntax follow Java.
-            ;; in java "3\0" means char 3 followed by the char with ascii code 0 (which is the null char)
-            ;; so "\9" would be a string with 1 tab char
-            ;; in visi, "\9" gets turned into "\\9". This seems to be by design
-  ;
-
-;; there are several problems with array, vector, map, set
-;; basically,
-;; clojure has this syntax
-;;  {:a 7, :b 8}
-;; but visi has this syntax
-;;  {"a" -> 7, "b" -> 8}
-;; the problem is that, if a line is just clojure, it works, but if in visi syntax, it doesn't because parser sees the opening bracket and think it's clojure
-;; on the other hand,
-;; x = {"a" -> 7, "b" -> 8}
-;; works but
-;; x = {:a 7, :b 8}
-;; doesn't
-;; also, when doing
-
-;; todo
-;; the syntax for line comment is lisp convention
-;; but for block comment is C, Java convension
-;; doesn't seem to be good
-
-;; todo
-;; the visi lang probably should be shielded from clojure
-;; and have a designed way to access clojure, as clojure with java
-;; because, otherwise, there's quite a few syntax mishmash. Confusing to use together and hard to specify to user and implement
