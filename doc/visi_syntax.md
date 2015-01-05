@@ -1,93 +1,53 @@
-2014-11-30
-Visi Syntax
-2014-12-06 this is incomplete
+# Visi Syntax
 
-────────── ────────── ────────── ────────── ──────────
-# Line comment start with ;
+# Comments
 
-example
-    ; this is a comment
+Line comment start with `;;`
 
-# Block comment `/* ... */`
+    ;; this is a comment
 
-example:
+<!-- Block comment starts with `/*` and ends with `*/` -->
+<!-- Example: -->
 
-    /* this is
-    a multi-line
-    comment
-    */
+<!--     /* this is -->
+<!--     a multi-line -->
+<!--     comment -->
+<!--     */ -->
 
-────────── ────────── ────────── ────────── ──────────
-#Arithmetics
+<!-- block comment can be nested. -->
 
-addition
-example
-    3 + 2
-returns 5
+<!-- todo: block comment doesn't work -->
 
-substraction
-example
-    3 - 2
-returns 1
+# Strings
 
-multiplication
-example
-    3 * 2
-returns 6
+String is writen using double quotes.
+Example:
 
-Power (exponential)
-example
-    3 ^ 2
-returns 9.0
+    "This is a string."
 
-division and fracation
-example
-    3 / 2
-returns an exact fraction 3/2
+Single quote, such as `'something'`, is not supported.
 
-    3 / 2.0
-returns 1.5
+To join 2 strings, use the `&` operator.
+Example:
 
-Join String
-&
-example
-    "a" & "b"
-returns
-"ab"
+    ;; join 2 strings
+    "a" & "b" ;; "ab"
 
-────────── ────────── ────────── ────────── ──────────
-#Comparison
+## String Escape
 
-You can use
-    x < y
-    x > y
-    x <= y
-    x >= y
+Inside a string, the following has special meaning:
 
-    x == y
-    x != y
-    x <> y
+* `\n` means newline
+* `\t` means tab
+* `\\` means \
+* `\"` means "
 
-「!=」 is the same as 「<>」
+Backslash followed by anything else does not have special meaning. For example: `\9` means `9`
 
-────────── ────────── ────────── ────────── ──────────
-#boolean operator
+# Number
 
-「true」  is builtin value for true.
-「false」  is builtin value for false.
+Example:
 
-“and” operator is 「&&」
-example
-    x && y
-
-“or” operator is 「||」
-example
-    x || y
-
-────────── ────────── ────────── ────────── ──────────
-#number
-
-example
     3
     +3
     -3
@@ -98,79 +58,252 @@ example
     +3.1
     -3.1
 
-number quantifiers
+Number can be followed by a quantifier.
+Example:
 
-Number can follow a quantifier
-
-    1.seconds  # same as 1000
-    1.minutes # same as 60 * 1000
+    1.seconds  ;; same as 1000
+    1.minutes  ;; same as 60 * 1000
     1.hours
     1.days
-    1% # same as 1/100
-    1.% # same as 0.01
+    1%         ;; same as 1/100
+    1.%        ;; same as 0.01
 
-────────── ────────── ────────── ────────── ──────────
-#url
-example
+# Arithmetics
+
+    3 + 2   ;; 5
+    3 - 2   ;; 1
+    3 * 2   ;; 6
+    3 ^ 2   ;; exponential. Returns 9.0
+    3 / 2   ;; returns an exact fraction 3/2
+    3 / 2.0 ;; 1.5
+
+Note: you must have a space between operator and its operand.
+
+# Comparison
+
+Standard comparison operators are supported. Example:
+
+    x < y
+    x > y
+    x <= y
+    x >= y
+
+    x == y
+    x != y
+    x <> y  ;; same as !=
+
+# Boolean
+
+`true` is builtin value for true.
+`false` is builtin value for false.
+
+“and” operator is `&&`
+Example:
+
+    x && y
+
+“or” operator is `||`
+Example:
+
+    x || y
+    1 > 3 || 3 > 1
+
+# URL
+
+URL can be used.
+Example:
 
     http://google.com
     https://google.com
-    http://google.com:80/
     file://…
     ftp://…
-    twtr://…
+    twtr://…  ;; twitter API
 
-────────── ────────── ────────── ────────── ──────────
-#function
+URL is mostly used with `source` and `sink`.
 
-function definition has this syntx:
-    ‹name›( ‹param name 1›, ‹param name 1›, …) = ‹expression›;
-
-example
-    f(x, y) = x + y
-
-────────── ────────── ────────── ────────── ──────────
-visi expression
-
-Each line is one of:
-
-* constant definition
-* function definition
-* Source
-* expression
-
-A constant definition looks like this:
-    ‹name› = ‹expression›;
-
-A “sink” looks like this
-    sink ‹name› = ‹EXPRESSION›
-or
-    sink: ‹name› = ‹EXPRESSION›
-
-example
-    sink wc2 = wc
-
-A “source” looks like this
+A `source` looks like this
 
     source ‹name›
-    source ‹name› = ‹URL›
+    source ‹name› = ‹URL›    ;; set ‹name› to ‹URL› content
     source ‹name› = ‹EXPRESSION›
 
-example
+<!-- todo: what does 「source ‹name›」 do by itself? -->
+
+`source` is used to get content of a URL.
+Example:
+
     source cities = "https://www.census.gov/geo/reference/codes/files/national_county.txt"
 
-Expression computes a value.
+A “sink” looks like this
 
- EXPRESSION2 / Pipe2Expression / PipeExpression
+    sink ‹name› = ‹EXPRESSION›
 
-Expression computes a value.
+or
 
-PipeExpression is something like
+    sink: ‹name› = ‹EXPRESSION›
 
- ‹expression› |> ‹PipeCommands›
+Example:
+
+    sink wc2 = wc
+
+<!-- todo: what does sink do exactly, how it differ from source -->
+
+# Variables
+
+Variable can defined like this:
+
+    x = 4
+
+You must have a space around the equal sign.
+
+# Array
+
+A array (also known as “vector”) is a ordered list of items.
+Example:
+
+    [7, 2, "something"]
+    x = [3, 4, 5]
+    y = [3, 4, 5,]
+
+Elements must be separated by comma.
+Extra comma at the end is ok.
+
+To access a element of a array, append a square bracket [] after the expression.  Example:
+
+    x = [3, 4 , 5]
+    x[2] ;; returns 5
+
+# Map
+
+A “map” is an unordered set of pairs, each pair is a key and value.
+Example:
+
+    myMap = {"xx" -> 3, "yy" -> 4}
+    myMap = {"xx" -> 3, "yy" -> 4, }
+
+<!-- todo the key in map can also be a DottedThing -->
+
+Use `%%` to join 2 maps.
+
+Example:
+
+    aa = {"a" -> 7, "b" -> 8}
+    bb = {"c" -> 9, "d" -> 2}
+    aa %% bb ;; returns {"c" 9, "d" 2, "a" 7, "b" 8}
+
+# Function
+
+Function definition has this syntax:
+
+    ‹name›() = ‹expression›
+    ‹name›(‹x›) = ‹expression›
+    ‹name›(‹x›, ‹y›, …) = ‹expression›
+
+Example:
+
+    f(x, y) = x + y
+
+# Piping
+
+<!-- EXPRESSION = EXPRESSION2 / Pipe2Expression / PipeExpression -->
+<!-- Pipe2Expression = EXPRESSION2  (SPACES <'>>'> SPACES (FunctionExpr / EXPRESSION2))+; -->
+<!-- PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+ -->
+
+   <!-- :Pipe2Expression (fn [nub & others] -->
+   <!--                    (let [x `x#] -->
+   <!--                      `(~'as-> ~nub ~x ~@(map (fn [y] `(~y ~x)) others)))) -->
+
+   <!-- :PipeExpression (fn [root & pipeline] -->
+   <!--                   (let [x `x#] -->
+   <!--                     `(~'as-> ~root ~x ~@(map #(% x) pipeline)))) -->
+
+<!-- (vp/pre-process-line "3 >> map") -->
+
+An expression can be fed into a command or function, much like Linux's pipe `|`.
+
+You can “pipe” is something like
+
+    ‹expression› >> ‹function›
+    ‹expression› |> ‹PipeCommands›
+
+<!-- the difference between >> and |> seems to be that one is for piping to function, and the other is for visi command -->
+
  ‹expression› |> ‹PipeCommands› |> ‹PipeCommands›
 
-example
+<!-- ["AB", "CD"] |> map .toLowerCase -->
+
+# Pipe Commands
+
+<!-- <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand | Zipcommand | Dropcommand | Sortcommand | Samplecommand | Foldcommand | Productcommand | Groupbycommand -->
+<!-- the following covers the complete PipeCommands -->
+
+Each of the commands has the syntax of `‹cmd name› ‹values›` todo
+The value can be todo
+
+<!-- Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr) -->
+   <!-- :Mapcommand (fn [x] (fn [inside] `(~'visi.runtime/v-map ~inside ~x ))) -->
+
+    xform ‹name,keyword,ƒ›
+    map ‹name,keyword,ƒ›
+
+<!-- Flatmapcommand = (<'xform-cat'> | <'mapcat'> | <'flatmap'>) SPACES (IDENTIFIER | Keyword | FunctionExpr) -->
+   <!-- :Flatmapcommand (fn [x] (fn [inside] `(~'visi.runtime/v-flat-map ~inside ~x ))) -->
+
+    xform-cat ‹name,keyword,ƒ›
+    mapcat ‹name,keyword,ƒ›
+    flatmap ‹name,keyword,ƒ›
+
+<!-- Filtercommand = (<'filter'>) SPACES (IDENTIFIER | Keyword | FunctionExpr) -->
+   <!-- :Filtercommand (fn [x] (fn [inside] `(~'visi.runtime/v-filter ~inside ~x ))) -->
+
+    filter ‹name,keyword,ƒ›
+
+<!-- Sortcommand = (<'sort'>) SPACES (IDENTIFIER | Keyword | FunctionExpr) (SPACES <','> ('ascending' | 'descending'))? -->
+   <!-- :Sortcommand (fn -->
+   <!--                ([x] (fn [inside] `(~'visi.runtime/v-sort-by ~inside ~x true))) -->
+   <!--                ([x order] (fn [inside] `(~'visi.runtime/v-sort-by ~inside ~x (= order 'ascending'))))) -->
+
+    sort ‹name,keyword,ƒ›
+    sort ‹name,keyword,ƒ›, ascending
+    sort ‹name,keyword,ƒ›, descending
+
+<!-- Groupbycommand = (<'group by'> / <'group'> ) SPACES (IDENTIFIER | Keyword | FunctionExpr) -->
+   <!-- :Groupbycommand (fn [x] (fn [inside] `(~'visi.runtime/v-group-by ~inside ~x ))) -->
+
+    group ‹name,keyword,ƒ›
+    group by ‹name,keyword,ƒ›
+
+<!-- Zipcommand = (<'join'> | <'zip'>) SPACES (IDENTIFIER | (<'('> (SPACES? IDENTIFIER SPACES? <','> SPACES?)+ <')'> )) -->
+<!-- not implemented? -->
+    join ‹name›
+    join (‹elem1›, ‹elem2›, …)
+    zip ‹name›
+    zip (‹elem1›, ‹elem2›, …)
+
+<!-- Productcommand = (<'product'> ) SPACES (IDENTIFIER | (<'('> (SPACES? IDENTIFIER SPACES? <','> SPACES?)+ <')'> )) -->
+<!-- not implemented? -->
+    product ‹name›
+    product (‹name›)
+    product (‹name1›, ‹name2›, …)
+
+<!-- Dropcommand = (<'drop'>) SPACES (IDENTIFIER | ConstExpr | ParenExpr) -->
+    drop ‹(IDENTIFIER | ConstExpr | ParenExpr)›
+
+<!-- Samplecommand = (<'sample'>) SPACES (IDENTIFIER | ConstExpr | ParenExpr) -->
+    sample ‹(IDENTIFIER | ConstExpr | ParenExpr)›
+
+<!-- Foldcommand = (<'fold'> | <'reduce'>) SPACES (((IDENTIFIER | ConstExpr | ParenExpr | MapExpr | VectorExpr) SPACES <'->'> SPACES)? (IDENTIFIER | FunctionExpr)) -->
+    fold …
+    reduce …
+
+Example:
+todo
+
+    lower = .cache(info |> map .toLowerCase)
+    map(.trim)
+
+Example:
+todo
 
     lower = .cache(info |> map .toLowerCase)
 
@@ -184,110 +317,128 @@ example
 
     wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
 
-  PipeExpression = (ParenExpr / IDENTIFIER) (SPACES '|>' SPACES PipeCommands )+
+    lower = .cache(info |> map .toLowerCase)
+    sins = lower |> filter # (.contains(it, "sin") && not(.contains(it, "sing")))
+    sins-plus-god-or-christ = sins |> filter # begin
 
-  <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand |
-                   Zipcommand | Dropcommand | Sortcommand |
-                   Samplecommand | Foldcommand | Productcommand |
-                   Groupbycommand
+    build_set(str) = s/split-lines(str) >> | map(.trim) >> | filter(# 0 < count(it)) >> | remove(# .startsWith(it, "
 
-  ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? ( EXPRESSION ) SPACES?);
+# Expressions
 
+<!-- EXPRESSION = EXPRESSION2 / Pipe2Expression / PipeExpression -->
+
+EXPRESSION2 =
+BlockExpression /
+  BlockExpression = SPACES? <'begin'> (SPACES |  LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
+   :BlockExpression (fn [& x] `(do ~@x))
+
+
+GetExpression /
+  GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
+
+
+IfElseExpr /
+
+  IfElseExpr = (SPACES? <'if'> SPACES EXPRESSION SPACES <'then'>
+               SPACES EXPRESSION SPACES <'else'> SPACES (OprExpression / EXPRESSION)) /
+               (EXPRESSION SPACES <'?'> SPACES EXPRESSION SPACES <':'> SPACES (OprExpression / EXPRESSION));
+:IfElseExpr (fn [test a b] `(~'if ~test ~a ~b))
+
+FuncCall /
+  FuncCall = SPACES? (IDENTIFIER | ClojureSymbol) SPACES?
+             <'('> (EXPRESSION <','>)*
+                   (EXPRESSION <','>?)? SPACES? <')'> SPACES?;
+   :FuncCall (fn [func & params] `(~func ~@params))
+
+
+ParenExpr /
+  ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
+   :ParenExpr identity
+
+ConstExpr /
+  ConstExpr = SPACES? (Number | Keyword | StringLit | RegexLit) SPACES?;
+   :ConstExpr identity
+
+FieldExpr /
+  FieldExpr = SPACES? IDENTIFIER (SPACES? <'.'> IDENTIFIER)+ SPACES?;
+   :FieldExpr (fn [root & others]
+                `(~'-> ~root ~@(map (fn [x] `(~'get ~(keyword x))) others)))
+
+FunctionExpr /
+  <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
+
+  FunctionExpr1 = SPACES? (IDENTIFIER | (<'('> SPACES? (IDENTIFIER SPACES?
+                 <','> SPACES?)*  IDENTIFIER SPACES? <','>? SPACES? <')'> ) )
+                 SPACES? <'=>'> SPACES? EXPRESSION SPACES?;
+
+MapExpr /
+  MapExpr = SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?;
+
+VectorExpr /
+  VectorExpr = SPACES? <'['> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <']'> SPACES?;
+   :VectorExpr (fn [& x] `[~@x])
+
+(SPACES? (IDENTIFIER | ClojureSymbol) SPACES?) /
+
+InlineFunc /
+  InlineFunc = SPACES? (ConstDef | FuncDef)+ SPACES EXPRESSION
+   :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
+
+MergeExpr /
+  MergeExpr = EXPRESSION (SPACES <'%%'> SPACES Pair)+;
+   :MergeExpr (fn [core & others] `(~'merge ~core ~@others))
+
+OprExpression
+  OprExpression = SPACES? Op10Exp SPACES?
+  Op10Exp =(Op9Exp SPACES Op10 SPACES Op9Exp) / Op9Exp;
+   :OprExpression identity
+
+Visi syntax are made of lines. Each line is one of:
+
+* *Constant Definition*. Example: `x = 4`
+* *Function Definition*. Example: `f(x) = x + 1`
+* *Source Definition*. Loading a URL. Example: `source cities = "https://www.census.gov/.../cities.txt"`. See URL section.
+* Expression. Example: `3 + 4`.
+
+Expression computes a value. Visi supports many types of expressions.
+
+# Block Expression
 BlockExpression start with “begin” and ends with “end”. In between, it can be one or more expressions, each on a line.
 
-  EXPRESSION2 = BlockExpression / GetExpression /
-  IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
-  FieldExpr / FunctionExpr / MapExpr / VectorExpr /
-  (SPACES? (IDENTIFIER | ClojureSymbol) SPACES?) /
-  InlineFunc / MergeExpr / OprExpression
+--------------------------------------------------------------------------------
 
-  Pipe2Expression = EXPRESSION2  (SPACES <'>>'> SPACES (FunctionExpr / EXPRESSION2))+;
+# Keyword
 
-  PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
+<!-- Keyword = <':'> IDENTIFIER; -->
+<!-- todo find out what this do exactly -->
 
-lower = .cache(info |> map .toLowerCase)
-sins = lower |> filter # (.contains(it, "sin") && not(.contains(it, "sing")))
-sins-plus-god-or-christ = sins |> filter # begin
+# DottedThing
 
-build_set(str) = s/split-lines(str) >> | map(.trim) >> | filter(# 0 < count(it)) >> | remove(# .startsWith(it, "
+<!-- todo find out what's DottedThing, how it behave -->
 
-────────── ────────── ────────── ────────── ──────────
-#commands
+<!-- todo: not exactly sure what NeverMatch is for. -->
 
-xform …
-map …
+# Parenthesized Expressions
 
-xform-cat …
-mapcat …
-flatmap …
+These seems to be used for grouping purposes only.
 
-filter …
-sort …
+ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
+    (‹expression›)
 
-group …
-group by …
+<!-- Partial1 = (SPACES? <'('> SPACES? Operator SPACES? <')'> SPACES?) -->
+<!-- :Partial1 (fn [x] (-> x second second op-lookup)) -->
 
-join …
-zip …
+    (‹operator›)
 
-product …
+<!-- Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES Operator SPACES? <')'> SPACES?) -->
+   <!-- :Partial2 (fn [v x] -->
+   <!--             (let [x2 `x#] -->
+   <!--               `(~'fn [~x2] (~(-> x second second op-lookup) ~v ~x2)))) -->
+    (‹expression› ‹operator›)
 
-drop …
-sample …
-
-fold …
-reduce …
-
-example
-lower = .cache(info |> map .toLowerCase)
-map(.trim)
-
-Flatmapcommands
-xform-cat ‹arg›
-mapcat ‹arg›
-flatmap ‹arg›
-
-────────── ────────── ────────── ────────── ──────────
-merge map.
-
- You can use 「%%」 to merge 2 maps.
-
-example
-    aa = {"a" -> 7, "b" -> 8}
-    bb = {"c" -> 9, "d" -> 2}
-    aa %% bb
-returns
-    {"c" 9, "d" 2, "a" 7, "b" 8}
-
-todo: not exactly sure what NeverMatch is for.
-
-────────── ────────── ────────── ────────── ──────────
-map, array, set
-
-a “map” is a set of pairs, each pair is a key and value.
-Write it like this:
-    oo = {"xx" -> 3, "yy" -> 4}
-
-a array is a ordered list of items.
-Write it like this:
-    [7, 2, "something"]
-
-a set is a collection of items. Items should not appear more than once.
-Write it like this:
-    #{7 2 "something"}
-
-────────── ────────── ────────── ────────── ──────────
-string escape
-
-inside a string,
-\n means newline
-\t means tab
-\\ means \
-\" means "
-
-backslash followed by anything else does not have special meaning.
-example
-"\9" means 「\9」
-
-────────── ────────── ────────── ────────── ──────────
+<!-- Partial3 = (SPACES? <'('> SPACES? Operator SPACES EXPRESSION SPACES? <')'> SPACES?) -->
+   <!-- :Partial3 (fn [x v] -->
+   <!--             (let [x2 `x#] -->
+   <!--               `(~'fn [~x2] (~(-> x second second op-lookup) ~x2 ~v )))) -->
+    (‹operator› ‹expression›)
 

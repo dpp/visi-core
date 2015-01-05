@@ -1,9 +1,0 @@
-diff -i -E -b -w -B /home/xah/git/dpp/visi/src/gorilla_repl_original/nrepl.clj /home/xah/git/dpp/visi/src/gorilla_repl/nrepl.clj
-3a4
->             [visi.middleware :as visi-m]
-15c16
-<         middleware (conj cider-mw #'render-mw/render-values)
----
->         middleware (conj cider-mw #'render-mw/render-values #'visi-m/visi-eval)
-
-Diff finished.  Sun Nov 16 05:22:09 2014
