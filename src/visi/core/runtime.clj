@@ -116,59 +116,87 @@
 
 
 (defn clean-it-up
-  [form]
-  (-> form ca/analyze (e/emit-form {:qualified-symbols true :hygienic true} ) doall))
+  [form the-env]
+  (clojure.pprint/pprint
+   (->
+    form
+    (ca/analyze (assoc
+                 (ca/empty-env)
+
+                 :locals
+                 (->> the-env keys
+                      (map (fn [x] [x {:op :binding
+                                       :name x
+                                       :form x
+                                       :local :let}]))
+                      (into {}))))
+
+    ))
+
+  (->
+   form
+   (ca/analyze (assoc
+                (ca/empty-env)
+
+                :locals
+                (->> the-env keys
+                     (map (fn [x] [x {:op :binding
+                                      :name x
+                                      :form x
+                                      :local :let}]))
+                     (into {}))))
+   (e/emit-form {:qualified-symbols true :hygienic true} )))
 
 (defmacro clean-it-up-mac
   [form]
-  `(quote ~(-> form ca/analyze (e/emit-form {:qualified-symbols true :hygienic false} ))))
+  `(quote ~(clean-it-up form &env)))
 
 (defmacro v-aggregate [this zero-value seq-op comb-op]
-  `(ti-aggregate ~this ~zero-value (quote ~(clean-it-up seq-op))
-                 (quote ~(clean-it-up comb-op))))
+  `(ti-aggregate ~this ~zero-value (quote ~(clean-it-up seq-op &env))
+                 (quote ~(clean-it-up comb-op &env))))
 
 (defmacro v-aggregate-by-key [this zero-value seq-op comb-op]
   `(ti-aggregate-by-key ~this ~zero-value
-                        (quote ~(clean-it-up  seq-op))
-                        (quote ~(clean-it-up  comb-op))))
+                        (quote ~(clean-it-up seq-op &env))
+                        (quote ~(clean-it-up comb-op &env))))
 (defmacro v-combine-by-key [this create-combiner merge-value merge-combiners]
-  `(ti-combine-by-key ~this (quote ~(clean-it-up  create-combiner))
-                      (quote ~(clean-it-up  merge-value))
-                      (quote ~(clean-it-up  merge-combiners))))
+  `(ti-combine-by-key ~this (quote ~(clean-it-up create-combiner &env))
+                      (quote ~(clean-it-up merge-value &env))
+                      (quote ~(clean-it-up merge-combiners &env))))
 (defmacro v-flat-map [this func]
-  `(ti-flat-map ~this (quote ~(clean-it-up  func))))
+  `(ti-flat-map ~this (quote ~(clean-it-up func &env))))
 (defmacro v-flat-map-double [this func]
-  `(ti-flat-map-double ~this (quote ~(clean-it-up func))))
+  `(ti-flat-map-double ~this (quote ~(clean-it-up func &env))))
 (defmacro v-flat-map-pair [this func]
-  `(ti-flat-map-pair ~this (quote ~(clean-it-up func))))
+  `(ti-flat-map-pair ~this (quote ~(clean-it-up func &env))))
 (defmacro v-flat-map-values [this func]
-  `(ti-flat-map-values ~this (quote ~(clean-it-up func))))
+  `(ti-flat-map-values ~this (quote ~(clean-it-up func &env))))
 (defmacro v-fold-by-key [this zero-value func]
-  `(ti-fold-by-key ~this ~zero-value (quote ~(clean-it-up func))))
+  `(ti-fold-by-key ~this ~zero-value (quote ~(clean-it-up func &env))))
 (defmacro v-fold [this zero func]
-  `(ti-fold ~this ~zero (quote ~(clean-it-up func))))
+  `(ti-fold ~this ~zero (quote ~(clean-it-up func &env))))
 (defmacro v-foreach [this func]
-  `(ti-foreach ~this (quote ~(clean-it-up func))))
+  `(ti-foreach ~this (quote ~(clean-it-up func &env))))
 (defmacro v-group-by [this func]
-  `(ti-group-by ~this (quote ~(clean-it-up func))))
+  `(ti-group-by ~this (quote ~(clean-it-up func &env))))
 (defmacro v-key-by [this func]
-  `(ti-key-by ~this (quote ~(clean-it-up func))))
+  `(ti-key-by ~this (quote ~(clean-it-up func &env))))
 (defmacro v-map-values [this func]
-  `(ti-map-values ~this (quote ~(clean-it-up func))))
+  `(ti-map-values ~this (quote ~(clean-it-up func &env))))
 (defmacro v-map [this func]
-  `(ti-map ~this (quote ~(clean-it-up func))))
+  `(ti-map ~this (quote ~(clean-it-up func &env))))
 (defmacro v-map-to-double [this func]
-  `(ti-map-to-double ~this (quote ~(clean-it-up func))))
+  `(ti-map-to-double ~this (quote ~(clean-it-up func &env))))
 (defmacro v-map-to-pair [this func]
-  `(ti-map-to-pair ~this (quote ~(clean-it-up func))))
+  `(ti-map-to-pair ~this (quote ~(clean-it-up func &env))))
 (defmacro v-reduce [this func]
-  `(ti-reduce ~this (quote ~(clean-it-up func))))
+  `(ti-reduce ~this (quote ~(clean-it-up func &env))))
 (defmacro v-reduce-by-key [this func]
-  `(ti-reduce-by-key ~this (quote ~(clean-it-up func))))
+  `(ti-reduce-by-key ~this (quote ~(clean-it-up func &env))))
 (defmacro v-filter [this func]
-  `(ti-filter ~this (quote ~(clean-it-up func))))
+  `(ti-filter ~this (quote ~(clean-it-up func &env))))
 (defmacro v-sort-by [this func ascending]
-  `(ti-sort-by ~this (quote ~(clean-it-up func)) ascending))
+  `(ti-sort-by ~this (quote ~(clean-it-up func &env)) ascending))
 
 
 
