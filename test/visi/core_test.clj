@@ -8,8 +8,8 @@
 (t/deftest test-parser
            (t/testing
             "Test visi parser. ConstDef"
-            (t/is (= (vp/pre-process-line "x = 3") "(def x 3)"))
-            (t/is (= (vp/pre-process-line "x  =   3") "(def x 3)"))
+            (t/is (= (vp/parse-for-tests "x = 3") '(def x 3)))
+            (t/is (= (vp/parse-for-tests "x  =   3") '(def x 3)))
             )
 
            (t/testing
@@ -25,27 +25,28 @@ y */")))
 
            (t/testing
             "Test visi parser. Function definition"
-            (t/is (= (vp/pre-process-line "f(x, y) = x + y") "(defn f [x y] (+ x y))"))
-            (t/is (= (vp/pre-process-line "f(x) = 3") "(defn f [x] 3)")))
+            (t/is (= (vp/parse-for-tests "f(x, y) = x + y") '(defn f [x y] (+ x y))))
+            (t/is (= (vp/parse-for-tests "f(x,y) = x+y") '(defn f [x y] (+ x y))))
+            (t/is (= (vp/parse-for-tests "f(x)=3") '(defn f [x] 3))))
 
            (t/testing
             "Test visi parser. source syntax"
 
             (t/is (=
-                   (vp/pre-process-line "source x52548")
-                   "(visi.runtime/source x52548)"))
+                   (vp/parse-for-tests "source x52548")
+                   '(visi.runtime/source x52548)))
 
             (t/is (=
-                   (vp/pre-process-line "source xyz = \"https://example.com/x.txt\"")
-                   "(visi.runtime/source xyz \"https://example.com/x.txt\")"))
+                   (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
+                   '(visi.runtime/source xyz "https://example.com/x.txt")))
+
+            ;; (t/is (=
+            ;;        (vp/pre-process-line "source 9")
+            ;;        "source 9"))
 
             (t/is (=
-                   (vp/pre-process-line "source 9")
-                   "source 9"))
-
-            (t/is (=
-                   (vp/pre-process-line "source x49519 = 7")
-                   "(visi.runtime/source x49519 7)"))
+                   (vp/parse-for-tests "source x49519 = 7")
+                   '(visi.runtime/source x49519 7)))
 
             ;; todo
             ;; source ‹name› = ‹EXPRESSION›
@@ -169,7 +170,7 @@ y */")))
 
             (t/is (=
                    (vp/pre-process-line "x = []")
-                   "x = []")))
+                   "(def x [])")))
 
            (t/testing
             "Test visi parser. map"

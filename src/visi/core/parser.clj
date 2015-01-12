@@ -39,7 +39,7 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
 
   ConstDef = ConstDef1 ;
 
-  ConstDef1 = IDENTIFIER SPACES <'='> SPACES? EXPRESSION SPACES? LineEnd;
+  ConstDef1 = IDENTIFIER SPACES? <'='> SPACES? EXPRESSION SPACES? LineEnd;
 
   FuncDef = IDENTIFIER SPACES? <'('> SPACES? (IDENTIFIER SPACES? <','> SPACES?)*
             IDENTIFIER SPACES? <','>? SPACES? <')'> SPACES?
@@ -53,12 +53,12 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
   START_OF_LINE = #'^' ;
 
   <SPACES> = (<'\n'> SPACES) / (SPACES <'\n'> SPACES) /
-             (SPACES? LineComment SPACES?) / (SPACES? BlockComment SPACES?) /
+             (SPACES? <LineComment> SPACES?) / (SPACES? <BlockComment> SPACES?) /
              <(' ' | '\t')+>;
 
-  LineComment = (SPACES? <';;'> (#'[^\n]')*);
+  <LineComment> = (SPACES? <'//'> (#'[^\n]')*);
 
-  BlockComment = <'/*'> (BlockComment | (!'*/' AnyChar))* <'*/'>;
+  <BlockComment> = <'/*'> (BlockComment | (!'*/' AnyChar))* <'*/'>;
 
   <AnyChar> = #'.' | '\n';
 
@@ -69,25 +69,25 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
 
   BlockExpression = SPACES? <'begin'> (SPACES |  LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
-  Op10Exp =(Op9Exp SPACES Op10 SPACES Op9Exp) / Op9Exp;
+  Op10Exp =(Op9Exp SPACES? Op10 SPACES? Op9Exp) / Op9Exp;
 
-  Op9Exp = (Op8Exp SPACES Op9 SPACES Op8Exp) / Op8Exp;
+  Op9Exp = (Op8Exp SPACES? Op9 SPACES? Op8Exp) / Op8Exp;
 
-  Op8Exp = (Op7Exp  SPACES Op8 SPACES Op7Exp) / Op7Exp;
+  Op8Exp = (Op7Exp  SPACES? Op8 SPACES? Op7Exp) / Op7Exp;
 
-  Op7Exp = (Op6Exp SPACES Op7 SPACES Op6Exp) / Op6Exp;
+  Op7Exp = (Op6Exp SPACES? Op7 SPACES? Op6Exp) / Op6Exp;
 
-  Op6Exp = (Op5Exp  SPACES Op6 SPACES Op5Exp) / Op5Exp;
+  Op6Exp = (Op5Exp  SPACES? Op6 SPACES? Op5Exp) / Op5Exp;
 
-  Op5Exp = (Op4Exp  SPACES Op5 SPACES Op4Exp) / Op4Exp;
+  Op5Exp = (Op4Exp  SPACES? Op5 SPACES? Op4Exp) / Op4Exp;
 
-  Op4Exp = (Op3Exp  SPACES Op4 SPACES Op3Exp) / Op3Exp;
+  Op4Exp = (Op3Exp  SPACES? Op4 SPACES? Op3Exp) / Op3Exp;
 
-  Op3Exp = (Op2Exp SPACES Op3 SPACES Op2Exp) / Op2Exp;
+  Op3Exp = (Op2Exp SPACES? Op3 SPACES? Op2Exp) / Op2Exp;
 
-  Op2Exp = (Op1Exp SPACES Op2 SPACES Op1Exp) / Op1Exp;
+  Op2Exp = (Op1Exp SPACES? Op2 SPACES? Op1Exp) / Op1Exp;
 
-  Op1Exp = (EXPRESSION SPACES Op1 SPACES EXPRESSION) / EXPRESSION;
+  Op1Exp = (EXPRESSION SPACES? Op1 SPACES? EXPRESSION) / EXPRESSION;
 
   Op10 = NeverMatch;
 
@@ -155,7 +155,7 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
 
   EXPRESSION2 = BlockExpression / GetExpression /
   IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
-  FieldExpr / FunctionExpr / MapExpr / VectorExpr /
+  FieldExpr / FunctionExpr / MapExpr / VectorExpr / SetExpr /
   (SPACES? (IDENTIFIER | ClojureSymbol) SPACES?) /
   InlineFunc / MergeExpr / OprExpression
 
@@ -167,15 +167,16 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
 
   Partial1 = (SPACES? <'('> SPACES? Operator SPACES? <')'> SPACES?)
 
-  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES Operator SPACES? <')'> SPACES?)
+  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES? Operator SPACES? <')'> SPACES?)
 
-  Partial3 = (SPACES? <'('> SPACES? Operator SPACES EXPRESSION SPACES? <')'> SPACES?)
+  Partial3 = (SPACES? <'('> SPACES? Operator SPACES? EXPRESSION SPACES? <')'> SPACES?)
 
   ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
 
   Keyword = <':'> IDENTIFIER;
 
-  IfElseExpr = (SPACES? <'if'> SPACES EXPRESSION SPACES <'then'>
+  IfElseExpr = (SPACES? <'if('> SPACES? EXPRESSION SPACES? <','> EXPRESSION SPACES? <','> EXPRESSION <')'> ) /
+               (SPACES? <'if'> SPACES EXPRESSION SPACES <'then'>
                SPACES EXPRESSION SPACES <'else'> SPACES (OprExpression / EXPRESSION)) /
                (EXPRESSION SPACES <'?'> SPACES EXPRESSION SPACES <':'> SPACES (OprExpression / EXPRESSION));
 
@@ -205,9 +206,10 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
 
   MapExpr = SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?;
 
-  VectorExpr = SPACES? <'['> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <']'> SPACES?;
+  VectorExpr = SPACES? <'['> SPACES?  <']'> SPACES? |
+               SPACES? <'['> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <']'> SPACES?;
 
-  SetExpr = SPACES? <'#{'> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <'}'> SPACES?;
+  SetExpr = SPACES? <'#{'> SPACES? <'}'> SPACES? | SPACES? <'#{'> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <'}'> SPACES?;
 
   DottedThing = SPACES? <'.'> IDENTIFIER SPACES?
 
@@ -482,7 +484,10 @@ todo: documentation incomplete.
   ([the-line namespace]
    (-> the-line .trim (str "\n") line-parser (post-process namespace))))
 
-
+(defn parse-for-tests
+  "parse the line into an S-expression"
+  [code]
+  (-> code parse-line :res))
 
 (defn pre-process-line
   "Looks at the line... if it looks like Clojure, pass it through, but if it
