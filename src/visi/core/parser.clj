@@ -5,29 +5,92 @@
    [clojure.string :as cljstr]
    ))
 
-;; note:
-;; the only functions called outside this file is
-
 (defn insert-meta
+"Takes 1 argument: res. res is a sequence or collection.
+Returns a new res, but with metadata attached to the second element of res.
+the new metadata is metadata of res, plus a new pair {:source res}"
   [res]
   (cons (first res)
         (cons
          (vary-meta (second res) merge {:source `(quote  ~res)})
          (drop 2 res))))
 
-(defn- deal-with-identifier
-  "x is a string.
-Returns a symbol of x. If x is any of nil, true, false, return the string as is."
-  [x]
-  (let [sx (symbol x)]
-    (cond
-     (= "nil" x) nil
-     (= "true" x) true
-     (= "false" x) false
-     :else sx)))
+(def multipliers
+"A map for converting units into milliseconds.
+Example:
+ (get multipliers \".seconds\" )
+returns 1000."
+  {"%" 1/100
+   ".seconds" 1000
+   ".minutes" (* 60 1000)
+   ".hours" (* 60 60 1000)
+   ".days" (* 24 60 60 1000)})
+
+(defn- process-inner
+"Takes 2 args: defs core.
+The first arg “defs” is definition.
+The second arg “core” is a sequence, that's visi expression.
+Called like this:
+ :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
+Used in transformation.  the :InlineFunc is like this
+ x = 4
+or
+ f(x)= x + 1
+
+todo: documentation incomplete.
+"
+  [defs core]
+  (if (empty? defs)
+    core
+    (let [a (first defs)
+          o (rest defs)]
+      `(let [~(second a)
+             ~(if (= 'defn (first a))
+                `(fn ~@(-> a rest rest))
+                (nth a 2))]
+         ~(process-inner o core)))
+    ))
+
+(def op-lookup
+  "A map. For converting operators as string to a corresponding symbol of Clojure.
+  Keys are strings. e.g.
+  \"+\" becomes '+
+  \"^\" becomes 'Math/pow"
+  {"+" '+
+   "-" '-
+   "*" '*
+   "/" '/
+   "%%" 'merge
+   "^" 'Math/pow
+   "&&" 'and
+   "&" 'str
+   "||" 'or
+   "==" '=
+   "<>" 'not=
+   "!=" 'not=
+   ">" '>
+   ">=" '>=
+   "<=" '<=
+   "<" '<})
+
+(def do-opr
+"A function that evaluate operator expression.
+If input is 1 arg, return it as is.
+If input is 3 args of the form
+    a [_ op] b
+transform it to the form
+    (clojureFunction a b)
+such that it becomes a valid Clojure expression."
+  (fn
+    ([x] x)
+    ([a [_ op] b] `(~(op-lookup  op) ~a ~b))
+    ;; ([[_ a op b]] `(~op ~a ~b))
+    ;;([a [_ op] b] `(~(op-lookup  op) ~a ~b))
+    ;;([[_ a [_ op] b]] `(~(op-lookup op) ~a ~b))
+    ))
 
 (def parse-def
-  "Visi grammar in ebnf-like instaparse format."
+  "Visi grammar in instaparse format."
   "
   Lines = (Line (<'\n'>)*)*;
 
@@ -220,92 +283,16 @@ Returns a symbol of x. If x is any of nil, true, false, return the string as is.
   Operator = Op1 | Op2 | Op3 | Op4 | Op5 | Op6 | Op7 | Op8 | Op9 | Op10;
   " )
 
-  ;; #'\\\"(?:(?:[\\][\\\"])|[^\\\"])*?\\\'"
-
-;; TODO visi-parse is called by visi-parse, but visi-parse isn't called anywhere.
-(def the-parser
-  "Returns a visi parser that starts with grammar rule `Lines'"
-  (insta/parser parse-def
-                :start :Lines ))
+;; todo: this seems to be a problem
+;;   InlineFunc = SPACES? (ConstDef | FuncDef)+ SPACES EXPRESSION
+;; it takes one or more. It should probably just be one?
 
 (def line-parser
-  "Returns a visi parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
+  "Returns a parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
   (insta/parser parse-def
                 :start :Line
                 ;; :output-format :enlive
                 :total true))
-
-(defn- process-inner
-"takes 2 args: defs core.
-Called like this:
- :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
-todo: documentation incomplete.
-"
-  [defs core]
-  (if (empty? defs)
-    core
-    (let [a (first defs)
-          o (rest defs)]
-      `(let [~(second a)
-             ~(if (= 'defn (first a))
-                `(fn ~@(-> a rest rest))
-                (nth a 2))]
-         ~(process-inner o core)))
-    ))
-
-(def multipliers
-"A map for converting seconds, minutes, hours, days, into miliseconds. Also, % converts to 1/100.
-  Keys are strings.
-  e.g. (get multipliers \".seconds\" ) returns 1000."
-  {"%" 1/100
-   ".seconds" 1000
-   ".minutes" (* 60 1000)
-   ".hours" (* 60 60 1000)
-   ".days" (* 24 60 60 1000)})
-
-(def op-lookup
-  "A map for converting operators as string to a corresponding symbol of Clojure.
-  Keys are strings. e.g.
-  \"+\" becomes '+
-  \"^\" becomes 'Math/pow"
-  {"+" '+
-   "-" '-
-   "*" '*
-   "/" '/
-   "%%" 'merge
-   "^" 'Math/pow
-   "&&" 'and
-   "&" 'str
-   "||" 'or
-   "==" '=
-   "<>" 'not=
-   "!=" 'not=
-   ">" '>
-   ">=" '>=
-   "<=" '<=
-   "<" '<})
-
-(def do-opr
-  "A function that evaluate operator expression.
-  if input is 1 arg, return it as is.
-  if input is 3 args of the form `a [_ op] b', evaluate it.
-  todo: documentation incomplete.
-  "
-  (fn
-    ([x] x)
-    ([a [_ op] b] `(~(op-lookup  op) ~a ~b))
-    ;; ([[_ a op b]] `(~op ~a ~b))
-    ;;([a [_ op] b] `(~(op-lookup  op) ~a ~b))
-    ;;([[_ a [_ op] b]] `(~(op-lookup op) ~a ~b))
-    ))
-
-;; todo: this function is not called anywhere
-(defn- expand-vars
-  "todo"
-  [[name & other]]
-  (if (empty? other)
-    name
-    `[~name ~(expand-vars other)]))
 
 (def xform-rules
   "A map for instaparse's transform. This is used to evaluate parse tree.
@@ -337,7 +324,7 @@ todo: documentation incomplete.
                         (do
                           (visi.runtime/do-sink (quote  ~name) ~expression)
                           ~expression))]
-             (insert-meta  res)
+             (insert-meta res)
              ))
 
    :Source (fn
@@ -449,37 +436,40 @@ todo: documentation incomplete.
 
    :EXPRESSION identity
    :EXPRESSION2 identity
-   :IDENTIFIER deal-with-identifier
+   :IDENTIFIER (fn [x] (cond
+         (= "nil" x) nil
+         (= "true" x) true
+         (= "false" x) false
+          :else
+         (symbol x)))
    :ClojureSymbol symbol
    })
 
 (defn post-process
   "Process the Instaparse output into Clojure if we can successfully parse the item.
-  Takes 2 args: parse-tree, namespace
-  parse-tree is Instaparse's parse tree.
-  Returns a map. If failed, returns
-  {:failed true :error parse-tree}
-  else, return
-  {:failed false :res parse-result}"
-  [parse-tree namespace]
-  (if (instance? instaparse.gll.Failure parse-tree)
-    {:failed true :error parse-tree}
-    {:failed false :res
-     (let [q (insta/transform xform-rules parse-tree)]
-       q
-       )}
-    ))
+args: parse-tree & namespace
+parse-tree is Instaparse's parse tree.
+Returns a map. If failed, returns
+ {:failed true :error parse-tree}
+else, return
+ {:failed false :res parse-result}"
+  ([parse-tree namespace] (post-process parse-tree))
+  ([parse-tree]
+   (if (instance? instaparse.gll.Failure parse-tree)
+       {:failed true :error parse-tree}
+     {:failed false :res (insta/transform xform-rules parse-tree) }
+     )))
 
 (defn parse-line
   "Parse 1 line of visi code.
-  Arguments: the-line, namespace
-  the-line is a string.
-  namespace is a symbol (or string?) TODO
-  If namespace not given, defaults to nil.
-  Returns a map. If failed, returns
-  {:failed true, :error parse-tree}
-  else, return
-  {:failed false, :res parse-result}"
+Arguments: the-line, namespace
+the-line is a string.
+namespace is a symbol (or string?) TODO
+If namespace not given, defaults to nil.
+Returns a map. If failed, returns
+ {:failed true, :error parse-tree}
+else, return
+ {:failed false, :res parse-result}"
   ([the-line] (parse-line the-line nil))
   ([the-line namespace]
    (-> the-line .trim (str "\n") line-parser (post-process namespace))))
@@ -491,9 +481,9 @@ todo: documentation incomplete.
 
 (defn pre-process-line
   "Looks at the line... if it looks like Clojure, pass it through, but if it
-  looks like Visi, parse it and return the Clojure code as one string.
-  Argument is a string.
-  Returns a string.
+looks like Visi, parse it and return the Clojure code as one string.
+Argument is a string.
+Returns a string.
 For example, \"x = 3\" returns \"(def x 3)\".
 For example, \"(+ 3 7)\" returns \"(+ 3 7)\".
 "

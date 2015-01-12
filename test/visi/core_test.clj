@@ -1,6 +1,13 @@
+;; (ns visi.core-test
+;;   (:require [clojure.test :as t]
+;;             [visi.core.parser :as vp]
+;;             ))
+
 (ns visi.core-test
   (:require [clojure.test :as t]
             [visi.core.parser :as vp]
+            [visi.core.runtime :as vr]
+            [visi.core.util :as vu]
             ))
 
 ;; 2014-12-06 TODO need to replace vp/pre-process-line by something else, preferably a evaluated result
