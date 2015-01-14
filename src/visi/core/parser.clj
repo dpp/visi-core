@@ -6,7 +6,7 @@
    ))
 
 (defn insert-meta
-"Takes 1 argument: res. res is a sequence or collection.
+"Takes 1 argument: res. res is a Clojure form, e.g. `(def x 4).
 Returns a new res, but with metadata attached to the second element of res.
 the new metadata is metadata of res, plus a new pair {:source res}"
   [res]
@@ -27,9 +27,9 @@ returns 1000."
    ".days" (* 24 60 60 1000)})
 
 (defn- process-inner
-"Takes 2 args: defs core.
-The first arg “defs” is definition.
-The second arg “core” is a sequence, that's visi expression.
+"「(process-inner defs core)」
+「defs」 is definition.
+「core」 second arg “” is a sequence, that's visi expression.
 Called like this:
  :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
 Used in transformation.  the :InlineFunc is like this
@@ -90,7 +90,7 @@ such that it becomes a valid Clojure expression."
     ))
 
 (def parse-def
-  "Visi grammar in instaparse format."
+  "Visi grammar in Instaparse format."
   "
   Lines = (Line (<'\n'>)*)*;
 
@@ -299,8 +299,12 @@ such that it becomes a valid Clojure expression."
   Keys are keywords, values are functions.
   This is called like this:
   (instaparse.core/transform xform-rules parsetree)"
-  {:Line (fn [x] x)
+  {
+
+   :Line (fn [x] x)
+
    :BlockExpression (fn [& x] `(do ~@x))
+
    :Number (fn
              ([x] (read-string x))
              ([x [_ qual]]
@@ -446,13 +450,16 @@ such that it becomes a valid Clojure expression."
    })
 
 (defn post-process
-  "Process the Instaparse output into Clojure if we can successfully parse the item.
-args: parse-tree & namespace
+"(post-process parse-tree)
+ (post-process parse-tree namespace)
+Transform parse-tree into Clojure form, returns a map.
 parse-tree is Instaparse's parse tree.
-Returns a map. If failed, returns
- {:failed true :error parse-tree}
+If the parse-tree contains parse error, return
+ {:failed true :error transform-result}
 else, return
- {:failed false :res parse-result}"
+ {:failed false :res transform-result}
+transform-result is Clojure form, e.g. `(def x 4)
+"
   ([parse-tree namespace] (post-process parse-tree))
   ([parse-tree]
    (if (instance? instaparse.gll.Failure parse-tree)
@@ -475,7 +482,7 @@ else, return
    (-> the-line .trim (str "\n") line-parser (post-process namespace))))
 
 (defn parse-for-tests
-  "parse the line into an S-expression"
+  "Parse the line into an S-expression"
   [code]
   (-> code parse-line :res))
 
