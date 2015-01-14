@@ -226,6 +226,13 @@
             (t/is (= (vp/parse-for-tests "x = [3,4]") '(def x [3 4])))
 
             (t/is (= (vp/parse-for-tests "x = []") '(def x []))))
+           
+           (t/testing
+               "Test evaluation"
+             (t/is (= (vp/parse-and-eval-for-tests
+                       "x = [1, 2, 3]; map( (+ 1), x)")
+                      (list 2 3 4)
+                      )))
 
            (t/testing
             "Test visi parser. map"
