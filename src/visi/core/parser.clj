@@ -486,6 +486,14 @@ else, return
   [code]
   (-> code parse-line :res))
 
+(defn parse-and-eval-for-tests
+  "Parse and evaluate the expression. throws if the expression can't be parsed"
+  [code]
+  (let [res (parse-line code)]
+    (if (:res res) 
+      (-> res :res eval)
+      (throw (Exception. (pr-str res))))))
+
 (defn pre-process-line
   "Looks at the line... if it looks like Clojure, pass it through, but if it
 looks like Visi, parse it and return the Clojure code as one string.
