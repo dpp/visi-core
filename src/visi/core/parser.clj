@@ -322,14 +322,14 @@ such that it becomes a valid Clojure expression."
            (let [name (symbol name)
                  res `(~'def ~name
                         (do
-                          (visi.runtime/do-sink (quote  ~name) ~expression)
+                          (visi.core.runtime/do-sink (quote  ~name) ~expression)
                           ~expression))]
              (insert-meta res)
              ))
 
    :Source (fn
-             ([x] `(visi.runtime/source ~x))
-             ([x v] `(visi.runtime/source ~x ~v)))
+             ([x] `(visi.core.runtime/source ~x))
+             ([x v] `(visi.core.runtime/source ~x ~v)))
 
    :MergeExpr (fn [core & others] `(~'merge ~core ~@others))
 
@@ -346,23 +346,23 @@ such that it becomes a valid Clojure expression."
                      (let [x `x#]
                        `(~'as-> ~root ~x ~@(map #(% x) pipeline))))
 
-   :Mapcommand (fn [x] (fn [inside] `(~'visi.runtime/v-map ~inside ~x )))
+   :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
 
    :Foldcommand (fn
                   ([x]
-                     (fn [inside] `(~'visi.runtime/v-reduce ~inside ~x)))
+                     (fn [inside] `(~'visi.core.runtime/v-reduce ~inside ~x)))
                   ([x y]
-                     (fn [inside] `(~'visi.runtime/v-fold ~inside ~x ~y))))
+                     (fn [inside] `(~'visi.core.runtime/v-fold ~inside ~x ~y))))
 
-   :Flatmapcommand (fn [x] (fn [inside] `(~'visi.runtime/v-flat-map ~inside ~x )))
+   :Flatmapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-flat-map ~inside ~x )))
 
-   :Filtercommand (fn [x] (fn [inside] `(~'visi.runtime/v-filter ~inside ~x )))
+   :Filtercommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-filter ~inside ~x )))
 
-   :Groupbycommand (fn [x] (fn [inside] `(~'visi.runtime/v-group-by ~inside ~x )))
+   :Groupbycommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-group-by ~inside ~x )))
 
    :Sortcommand (fn
-                  ([x] (fn [inside] `(~'visi.runtime/v-sort-by ~inside ~x true)))
-                  ([x order] (fn [inside] `(~'visi.runtime/v-sort-by ~inside ~x (= order 'ascending')))))
+                  ([x] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x true)))
+                  ([x order] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x (= order 'ascending')))))
 
    :StringLit (fn [x] (let [c (count x)]
                         (-> x

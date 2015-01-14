@@ -89,6 +89,7 @@
 )
 
 
+
 (defprotocol TransformInfo
   (ti-do-sink [this name])
   (ti-aggregate [this zero-value seq-op comb-op])
@@ -114,25 +115,136 @@
   (ti-drop [this count])
   )
 
+(defn FIXME
+  "Not implemented -- throw an exception"
+  []
+  (throw (Exception. "Not Implemented")))
 
-(defn clean-it-up
-  [form the-env]
-  (clojure.pprint/pprint
-   (->
-    form
-    (ca/analyze (assoc
-                 (ca/empty-env)
+(extend java.util.List
+  FunctionFor
+  {
+   :void-func-for (fn [this form] (eval form))
+   :double-func-for (fn [this form] (eval form))
+   :double-iter-func-for (fn [this form] (eval form))
+   :bool-func-for (fn [this form] (eval form))
+   :func-for (fn [this form] (eval form))
+   :pair-iter-func-for (fn [this form] (eval form))
+   :pair-func-for (fn [this form] (eval form))
+   :iter-func2-for (fn [this form] (eval form))
+   :iter-func-for (fn [this form] (eval form))
+   :func3-for (fn [this form] (eval form))
+   :func2-for (fn [this form] (eval form))
+   }
 
-                 :locals
-                 (->> the-env keys
-                      (map (fn [x] [x {:op :binding
-                                       :name x
-                                       :form x
-                                       :local :let}]))
-                      (into {}))))
+  TransformInfo
+  {
+   :ti-aggregate
+   (fn [this zero-value seq-op comb-op]
+     (FIXME)
+     )
 
+    :ti-flat-map
+    (fn [this func]
+      (mapcat (func-for this func) this))
+
+    :ti-flat-map-double
+    (fn [this func]
+      (mapcat (func-for this func) this))
+
+    :ti-flat-map-pair
+    (fn [this func]
+      (mapcat (func-for this func) this))
+
+    :ti-fold
+    (fn [this zero func]
+      (reduce (func-for this func) zero this))
+
+    :ti-foreach
+    (fn [this func]
+      (dorun (map (func-for this func) this)))
+
+    :ti-group-by
+    (fn [this func]
+      (FIXME))
+
+    :ti-map
+    (fn [this func]
+      (map (func-for this func) this))
+
+    :ti-map-to-double
+    (fn [this func]
+      (map (func-for this func) this))
+
+    :ti-map-to-pair
+    (fn [this func]
+      (map (func-for this func) this))
+
+    :ti-reduce
+    (fn [this func]
+      (reduce (func-for this func) this))
+
+    :ti-do-sink
+    (fn [rdd name]
+      (FIXME))
+
+    :ti-drop
+    (fn
+      [rdd num]
+      (drop num rdd))
+
+    :ti-aggregate-by-key
+    (fn [this zero-value seq-op comb-op]
+      (FIXME))
+
+    :ti-combine-by-key
+    (fn [this create-combiner merge-value merge-combiners]
+      (FIXME))
+
+    :ti-fold-by-key
+    (fn [this zero-value func]
+      (FIXME))
+
+    :ti-map-values
+    (fn [this func]
+      (map (func-for this func) this))
+
+
+    :ti-reduce-by-key
+    (fn [this func]
+      (FIXME))
+
+    :ti-filter
+    (fn [this func]
+      (filter (func-for this func) this))
+
+    :ti-sort-by
+    (fn [this func ascending]
+      ;; FIXME deal with descending
+      (sort-by (func-for this func) this))
+
+    :ti-flat-map-values
+    (fn [this func]
+      (FIXME))
+
+    :ti-key-by
+    (fn [this func]
+      (FIXME))
+   })
+
+(defn- make-array-thing
+  [it]
+  (if (map? it) [it] it))
+
+(defn- find-vars
+  "finds all the var references in the analyzed code"
+  [info]
+  (if (= :local (:op info))
+    [info]
+    (mapcat (fn [item] (mapcat find-vars (make-array-thing (item info)))) (:children info))
     ))
 
+(defn analyze-it
+  [form the-env]
   (->
    form
    (ca/analyze (assoc
@@ -145,7 +257,49 @@
                                       :form x
                                       :local :let}]))
                      (into {}))))
-   (e/emit-form {:qualified-symbols true :hygienic true} )))
+   ))
+
+(defn- find-bound
+  "Returns the vars that are bound outside the function"
+  [the-vars]
+  (filter (fn [v]
+            (let [var-name (:name v)
+                  info (-> v :env :locals (get var-name))]
+              ;; (println "for " var-name " info " info)
+              (= :binding (:op info)))
+            ) the-vars))
+
+(defmacro a-i
+  "Analyze a block of code"
+  [form]
+  (println (->> (analyze-it form &env) find-vars find-bound (map :name)))
+  `(quote [~(->  (analyze-it form &env) keys)])
+
+  )
+
+(defn clean-it-up
+  [form the-env]
+
+  (let [analyzed
+        (ca/analyze
+         form
+         (assoc
+          (ca/empty-env)
+
+          :locals
+          (->> the-env keys
+               (map (fn [x] [x {:op :binding
+                                :name x
+                                :form x
+                                :local :let}]))
+               (into {}))))
+        emitted (e/emit-form analyzed {:qualified-symbols true :hygienic true} )
+        bound (find-bound analyzed)
+        ]
+    (if (empty? bound) `(quote (~'eval ~emitted))
+        ())
+    )
+  )
 
 (defmacro clean-it-up-mac
   [form]
