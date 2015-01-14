@@ -41,11 +41,11 @@ y */")))
 
             (t/is (=
                    (vp/parse-for-tests "source x52548")
-                   '(visi.runtime/source x52548)))
+                   '(visi.core.runtime/source x52548)))
 
             (t/is (=
                    (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
-                   '(visi.runtime/source xyz "https://example.com/x.txt")))
+                   '(visi.core.runtime/source xyz "https://example.com/x.txt")))
 
             ;; (t/is (=
             ;;        (vp/pre-process-line "source 9")
@@ -53,7 +53,7 @@ y */")))
 
             (t/is (=
                    (vp/parse-for-tests "source x49519 = 7")
-                   '(visi.runtime/source x49519 7)))
+                   '(visi.core.runtime/source x49519 7)))
 
             ;; todo
             ;; source ‹name› = ‹EXPRESSION›
@@ -65,28 +65,28 @@ y */")))
             "Test visi parser. sink syntax"
             (t/is (=
                    (vp/pre-process-line "sink x25599 = y52942")
-                   "(def x25599 (do (visi.runtime/do-sink (quote x25599) y52942) y52942))"))
+                   "(def x25599 (do (visi.core.runtime/do-sink (quote x25599) y52942) y52942))"))
             (t/is (=
                    (vp/pre-process-line "sink: x60473 = y90940")
-                   "(def x60473 (do (visi.runtime/do-sink (quote x60473) y90940) y90940))")))
+                   "(def x60473 (do (visi.core.runtime/do-sink (quote x60473) y90940) y90940))")))
 
            ;; (t/testing
            ;;  "Test visi parser. pipe expression"
            ;;  ;; todo
            ;;  (t/is (=
            ;;         (vp/pre-process-line "info |> map .toLowerCase")
-           ;;         "(def lower (.cache (as-> info x__8942__auto__ (visi.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+           ;;         "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
 
            ;;  ;; (def lower
            ;;  ;;      (.cache
            ;;  ;;       (as-> info x__8942__auto__
-           ;;  ;;             (visi.runtime/v-map x__8942__auto__
+           ;;  ;;             (visi.core.runtime/v-map x__8942__auto__
            ;;  ;;                                 (fn [z__8941__auto__]
            ;;  ;;                                     (.toLowerCase z__8941__auto__))))))
 
            ;;  ;; (t/is (=
            ;;  ;;        (vp/pre-process-line "sins = lower |> filter # (.contains(it, \"sin\") && not(.contains(it, \"sing\")))")
-           ;;  ;;        "(def sins (as-> lower x__8942__auto__ (visi.runtime/v-filter x__8942__auto__ (fn [it] (and (.contains it \"sin\") (not (.contains it \"sing\")))))))"))
+           ;;  ;;        "(def sins (as-> lower x__8942__auto__ (visi.core.runtime/v-filter x__8942__auto__ (fn [it] (and (.contains it \"sin\") (not (.contains it \"sing\")))))))"))
 
            ;;  ;; sins-plus-god-or-christ = sins |> filter # begin
 
@@ -102,10 +102,10 @@ y */")))
             "Test visi parser. sink syntax"
             (t/is (=
                    (vp/pre-process-line "sink x25599 = y52942")
-                   "(def x25599 (do (visi.runtime/do-sink (quote x25599) y52942) y52942))"))
+                   "(def x25599 (do (visi.core.runtime/do-sink (quote x25599) y52942) y52942))"))
             (t/is (=
                    (vp/pre-process-line "sink: x60473 = y90940")
-                   "(def x60473 (do (visi.runtime/do-sink (quote x60473) y90940) y90940))")))
+                   "(def x60473 (do (visi.core.runtime/do-sink (quote x60473) y90940) y90940))")))
 
            (t/testing
             "Test visi parser. operator"
