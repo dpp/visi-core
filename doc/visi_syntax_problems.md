@@ -1,6 +1,42 @@
 # Visi Syntax Problems
 2015-01-02
 
+# line comment doesn't work
+
+    (vp/parse-for-tests " // 3ttttt")
+
+    (t/is (= (vp/parse-for-tests "//") nil))
+    (t/is (= (vp/parse-for-tests "// ") nil))
+    (t/is (= (vp/parse-for-tests "// \n") nil))
+    (t/is (= (vp/parse-for-tests "// 3") nil))
+    (t/is (= (vp/parse-for-tests "1 + 2 // 3 + 3") '(+ 1 2)))
+    
+    (vp/line-parser "//\n\n" :unhide :all)
+    (vp/line-parser "// \n" :unhide :all)
+    (vp/line-parser "// 3\n" :unhide :all)
+    (vp/line-parser " // 3\n" :unhide :all)
+    (vp/line-parser "// x\n" :unhide :all)
+    (vp/line-parser "// x =\n" :unhide :all)
+    (vp/line-parser "// x = 4\n" :unhide :all)
+    
+    (insta/parses vp/line-parser "//\n\n" :unhide :all)
+    (insta/parses vp/line-parser "//\n\n" :unhide :all :total true) ; infinite loop
+
+
+# extra space in front of line line doesn't work
+
+    (vp/line-parser " x = 4\n")
+
+    Parse error at line 2, column 1:
+    
+    ^
+    Expected one of:
+    #"[a-zA-Z][a-zA-Z0-9\-_\?]*"
+    "\n"
+    "//"
+    "/*"
+    "\t"
+    " "
 
 # misc
 
