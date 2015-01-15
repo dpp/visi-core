@@ -21,10 +21,10 @@ Example:
  (get multipliers \".seconds\" )
 returns 1000."
   {"%" 1/100
-   ".seconds" 1000
-   ".minutes" (* 60 1000)
-   ".hours" (* 60 60 1000)
-   ".days" (* 24 60 60 1000)})
+   "#seconds" 1000
+   "#minutes" (* 60 1000)
+   "#hours" (* 60 60 1000)
+   "#days" (* 24 60 60 1000)})
 
 (defn- process-inner
 "「(process-inner defs core)」
@@ -94,11 +94,11 @@ such that it becomes a valid Clojure expression."
   "
   Lines = (Line (<'\n'>)*)*;
 
-  Line = ((BlockComment <'\n'>) | LineComment)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+  Line = (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*));
 
   <Def> = <START_OF_LINE> (ConstDef | FuncDef);
 
-  <LineEnd> = <'\n'>+ | (<';'> SPACES*)
+  <LineEnd> = <'\n'>+ | (<';'>)
 
   ConstDef = ConstDef1 ;
 
@@ -265,7 +265,7 @@ such that it becomes a valid Clojure expression."
 
   Number = #'(\\-|\\+)?([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+|[0-9]+)' NumberQualifier?;
 
-  NumberQualifier = ('%' | '.minutes' | '.hours' | '.seconds' | '.days');
+  NumberQualifier = ('%' | '#minutes' | '#hours' | '#seconds' | '#days');
 
   MapExpr = SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?;
 
@@ -301,7 +301,7 @@ such that it becomes a valid Clojure expression."
   (instaparse.core/transform xform-rules parsetree)"
   {
 
-   :Line identity
+   :Line (fn [& x] (first  x))
 
    :BlockExpression (fn [& x] `(do ~@x))
 
@@ -490,7 +490,7 @@ else, return
   "Parse and evaluate the expression. throws if the expression can't be parsed"
   [code]
   (let [res (parse-line code)]
-    (if (:res res) 
+    (if (:res res)
       (-> res :res eval)
       (throw (Exception. (pr-str res))))))
 

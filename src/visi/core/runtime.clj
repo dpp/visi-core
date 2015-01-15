@@ -279,7 +279,7 @@
 
 (defn clean-it-up
   [form the-env]
-
+  (println "Sym " (-> the-env vals first .sym .getClass))
   (let [analyzed
         (ca/analyze
          form
@@ -294,20 +294,26 @@
                                 :local :let}]))
                (into {}))))
         emitted (e/emit-form analyzed {:qualified-symbols true :hygienic true} )
-        bound (find-bound analyzed)
+        bound (-> analyzed find-vars find-bound )
         ]
+    (println "Bound " bound)
     (if (empty? bound) `(quote (~'eval ~emitted))
-        ())
+        `(quote
+          `(list `let [~@(for [local bound,
+                               let-arg [`(quote ~(:name local))
+                                        `(list `quote ~(:name  local))]]
+                           let-arg)]
+                 ~'eval ~emitted)))
     )
   )
 
 (defmacro clean-it-up-mac
   [form]
-  `(quote ~(clean-it-up form &env)))
+  (clean-it-up form &env))
 
 (defmacro v-aggregate [this zero-value seq-op comb-op]
-  `(ti-aggregate ~this ~zero-value (quote ~(clean-it-up seq-op &env))
-                 (quote ~(clean-it-up comb-op &env))))
+  `(ti-aggregate ~this ~zero-value ~(clean-it-up seq-op &env)
+                 ~(clean-it-up comb-op &env)))
 
 (defmacro v-aggregate-by-key [this zero-value seq-op comb-op]
   `(ti-aggregate-by-key ~this ~zero-value
@@ -509,7 +515,7 @@
 
 (defmacro source
   [var-name url]
-  `(~'def ~(symbol var-name) (build-rdd-from-url (~'visi.runtime/spark-context) ~url)))
+  `(~'def ~(symbol var-name) (build-rdd-from-url (~'visi.core.runtime/spark-context) ~url)))
 
 (defmulti scala-prod-to-vector class)
 

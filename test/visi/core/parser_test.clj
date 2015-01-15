@@ -35,11 +35,11 @@
       "Test number quantifier"
     (t/is (= (vp/parse-for-tests "2%") '1/50))
     (t/is (= (vp/parse-for-tests "2.%") '0.02))
-    (t/is (= (vp/parse-for-tests "1..seconds") '1000.0))
-    (t/is (= (vp/parse-for-tests "1..minutes") '60000.0))
-    (t/is (= (vp/parse-for-tests "1..hours") '3600000.0))
-    (t/is (= (vp/parse-for-tests "1..days") '8.64E7))
-    (t/is (= (vp/parse-and-eval-for-tests "1..seconds + 1..minutes") 61000))
+    (t/is (= (vp/parse-for-tests "1#seconds") 1000))
+    (t/is (= (vp/parse-for-tests "1.#minutes") '60000.0))
+    (t/is (= (vp/parse-for-tests "1.0#hours") '3600000.0))
+    (t/is (= (vp/parse-for-tests "1#days") 86400000))
+    (t/is (= (vp/parse-and-eval-for-tests "1#seconds + 1#minutes") 61000))
     )
 
   (t/testing
@@ -130,18 +130,18 @@
       "Test block expression"
 
     (t/is (= (vp/parse-for-tests "begin
-4
+ 4
 end")
              '(do 4)))
 
     (t/is (= (vp/parse-for-tests "begin
-4;
+ 4;
 end")
              '(do 4)))
 
     (t/is (= (vp/parse-for-tests "begin
-4;
-7;
+ 4;
+ 7;
 end")
              '(do 4 7)))
 
@@ -233,7 +233,7 @@ end")
            (vp/parse-for-tests "x = {.y -> 7}")
            '(def x {:y 7})))
 
-    ;; todo. need to figure out a proper eval test for this. set a var to map data type, then retrieve one element using the var. 
+    ;; todo. need to figure out a proper eval test for this. set a var to map data type, then retrieve one element using the var.
     ;; some' like this
     ;; x = {.y -> 7}; x[.y]
     ;; need to figure out the semantics of the diff of
@@ -244,7 +244,7 @@ end")
     ;; (t/is (=
     ;;        (vp/parse-and-eval-for-tests "x = {.y -> 8}")
     ;;        #'visi.core.parser-test/x))
-    
+
     ;; todo. needed to look into DottedThing
     (t/is (=
            (vp/parse-for-tests "x = {.xx -> 3}")
@@ -261,27 +261,27 @@ end")
 
     ;; (insta/parse (insta/parser vp/parse-def :start :Line) "{\"xx\" -> 3, \"yy\" -> 4}")
 
-    ;; [:Line 
-    ;;  [:EXPRESSION 
-    ;;   [:EXPRESSION2 
-    ;;    [:MapExpr 
-    ;;     [:Pair 
-    ;;      [:EXPRESSION 
-    ;;       [:EXPRESSION2 
-    ;;        [:ConstExpr 
-    ;;         [:StringLit "\"xx\""]]]] 
-    ;;      [:EXPRESSION 
-    ;;       [:EXPRESSION2 
-    ;;        [:ConstExpr 
-    ;;         [:Number "3"]]]]] 
-    ;;     [:Pair 
-    ;;      [:EXPRESSION 
-    ;;       [:EXPRESSION2 
-    ;;        [:ConstExpr 
-    ;;         [:StringLit "\"yy\""]]]] 
-    ;;      [:EXPRESSION 
-    ;;       [:EXPRESSION2 
-    ;;        [:ConstExpr 
+    ;; [:Line
+    ;;  [:EXPRESSION
+    ;;   [:EXPRESSION2
+    ;;    [:MapExpr
+    ;;     [:Pair
+    ;;      [:EXPRESSION
+    ;;       [:EXPRESSION2
+    ;;        [:ConstExpr
+    ;;         [:StringLit "\"xx\""]]]]
+    ;;      [:EXPRESSION
+    ;;       [:EXPRESSION2
+    ;;        [:ConstExpr
+    ;;         [:Number "3"]]]]]
+    ;;     [:Pair
+    ;;      [:EXPRESSION
+    ;;       [:EXPRESSION2
+    ;;        [:ConstExpr
+    ;;         [:StringLit "\"yy\""]]]]
+    ;;      [:EXPRESSION
+    ;;       [:EXPRESSION2
+    ;;        [:ConstExpr
     ;;         [:Number "4"]]]]]]]]]
 
     ;; todo this works
@@ -290,7 +290,7 @@ end")
     ;; {"xx" -> 3, "yy" -> 4}
     ;; CompilerException java.lang.RuntimeException: Can't take value of a macro: #'clojure.core/->, compiling:(/tmp/form-init1224820726145481961.clj:1:113)
     ;; one is turned into clojure
-    
+
     )
 
   (t/testing
@@ -347,8 +347,8 @@ end")
   (t/testing
       "Test parser, misc"
 
-    (t/is (= (vp/parse-for-tests "x=[3];2")
-             (vp/parse-for-tests "x=[3]; 2")))
+    (t/is (= (vp/parse-for-tests "x=[3]; 2")
+             '(clojure.core/let [x [3]] 2)))
 
   ;; :Pair (fn [a b] `[~a ~b])
   ;; Pair = (DottedThing / EXPRESSION) <'->'> EXPRESSION;
