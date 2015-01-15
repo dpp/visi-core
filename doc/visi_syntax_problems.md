@@ -1,31 +1,28 @@
 # Visi Syntax Problems
-2015-01-02
 
-# line comment doesn't work
+# parse error (vp/parse-for-tests " // x = 3")
 
-    (vp/parse-for-tests " // 3ttttt")
+    (vp/parse-for-tests " // x = 3")
 
-    (t/is (= (vp/parse-for-tests "//") nil))
-    (t/is (= (vp/parse-for-tests "// ") nil))
-    (t/is (= (vp/parse-for-tests "// \n") nil))
-    (t/is (= (vp/parse-for-tests "// 3") nil))
-    (t/is (= (vp/parse-for-tests "1 + 2 // 3 + 3") '(+ 1 2)))
-    
-    (vp/line-parser "//\n\n" :unhide :all)
-    (vp/line-parser "// \n" :unhide :all)
-    (vp/line-parser "// 3\n" :unhide :all)
-    (vp/line-parser " // 3\n" :unhide :all)
-    (vp/line-parser "// x\n" :unhide :all)
-    (vp/line-parser "// x =\n" :unhide :all)
-    (vp/line-parser "// x = 4\n" :unhide :all)
-    
-    (insta/parses vp/line-parser "//\n\n" :unhide :all)
-    (insta/parses vp/line-parser "//\n\n" :unhide :all :total true) ; infinite loop
+    expected: (= (vp/parse-for-tests " // x = 3") nil)
+    actual: clojure.lang.ArityException: Wrong number of args (6) passed to: core/identity
 
 
-# extra space in front of line line doesn't work
+# number quantifier syntax
 
-    (vp/line-parser " x = 4\n")
+this works
+
+    1..seconds
+
+this doesn't
+
+    1.seconds
+
+This situation isn't intuitive. Same for other number quantifiers except %. The cause seems to be that the parser eats the dot as float number.
+
+# grammar: Line rule doesn't allow space in front
+
+    (vp/line-parser "x = 4\n")
 
     Parse error at line 2, column 1:
     
@@ -37,6 +34,18 @@
     "/*"
     "\t"
     " "
+
+Not a visi syntax problem. But the grammar 
+
+    Line = ((BlockComment <'\n'>) | LineComment)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+
+should allow this case.
+
+# grammar problem: LineComment in front of Line
+
+    Line = ((BlockComment <'\n'>) | LineComment)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+
+the LineComment in front doesn't make sense.
 
 # misc
 
@@ -50,3 +59,18 @@
 <!-- In Java `3\0` means char 3 followed by the char with ascii code 0 (which is the null char) -->
 <!-- So `\9` would be a string with 1 tab char -->
 <!-- in Visi, `\9` gets turned into `\\9`. This seems to be by design -->
+
+the grammar spec doesn't seems clean. For example:
+
+    <LineEnd> = <'\n'>+ | (<';'> SPACES*)
+
+ideally, it should be just a semicolon. There seems a lot room to improve here. 
+
+example, this
+
+    (insta/parses vp/line-parser "x = 4\n" :partial true )
+
+visi.core-test=> (insta/parses vparser "x = 4\n" :partial true)
+
+StackOverflowError   clojure.lang.PersistentHashMap.hash (PersistentHashMap.java:120)
+visi.core-test=> 

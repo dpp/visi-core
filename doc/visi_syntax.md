@@ -332,10 +332,8 @@ BlockExpression /
   BlockExpression = SPACES? <'begin'> (SPACES |  LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
    :BlockExpression (fn [& x] `(do ~@x))
 
-
 GetExpression /
   GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
-
 
 IfElseExpr /
 
@@ -349,7 +347,6 @@ FuncCall /
              <'('> (EXPRESSION <','>)*
                    (EXPRESSION <','>?)? SPACES? <')'> SPACES?;
    :FuncCall (fn [func & params] `(~func ~@params))
-
 
 ParenExpr /
   ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
@@ -403,9 +400,15 @@ Visi syntax are made of lines. Each line is one of:
 Expression computes a value. Visi supports many types of expressions.
 
 # Block Expression
-BlockExpression start with “begin” and ends with “end”. In between, it can be one or more expressions, each on a line.
 
---------------------------------------------------------------------------------
+BlockExpression start with `begin` and ends with `end`. In between, it can be one or more expressions, each on a line.
+
+Example
+
+    begin
+    x = 4
+    y = 7
+    end
 
 # Keyword
 

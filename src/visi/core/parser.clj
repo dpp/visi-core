@@ -130,7 +130,7 @@ such that it becomes a valid Clojure expression."
   ClojureSymbol = #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
   #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*';
 
-  BlockExpression = SPACES? <'begin'> (SPACES |  LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
+  BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
   Op10Exp =(Op9Exp SPACES? Op10 SPACES? Op9Exp) / Op9Exp;
 
@@ -301,7 +301,7 @@ such that it becomes a valid Clojure expression."
   (instaparse.core/transform xform-rules parsetree)"
   {
 
-   :Line (fn [x] x)
+   :Line identity
 
    :BlockExpression (fn [& x] `(do ~@x))
 
