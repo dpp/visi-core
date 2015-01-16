@@ -152,15 +152,15 @@ end")
   (t/testing
       "Test Line comment"
     (t/is (=
-           (vp/parse-for-tests "//")
-           (vp/parse-for-tests "// ")
-           (vp/parse-for-tests " //")
-           (vp/parse-for-tests "// \n")
+           (vp/parse-for-tests "##")
+           (vp/parse-for-tests "## ")
+           (vp/parse-for-tests " ##")
+           (vp/parse-for-tests "## \n")
            nil))
 
-    (t/is (= (vp/parse-for-tests "2// 3") '2))
-    (t/is (= (vp/parse-for-tests "1 + 2 // 3 + 3") '(+ 1 2)))
-    ;; (t/is (= (vp/parse-for-tests " // x = 3") nil)) ; FIXME this is a java exception
+    (t/is (= (vp/parse-for-tests "2## 3") '2))
+    (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(+ 1 2)))
+    (t/is (= (vp/parse-for-tests " ## x = 3") nil)) ; FIXME this is a java exception
     )
 
   (t/testing

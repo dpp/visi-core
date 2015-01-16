@@ -119,7 +119,7 @@ such that it becomes a valid Clojure expression."
              (SPACES? <LineComment> SPACES?) / (SPACES? <BlockComment> SPACES?) /
              <(' ' | '\t')+>;
 
-  <LineComment> = (SPACES? <'//'> (#'[^\n]')*);
+  <LineComment> = (SPACES? <'##'> (#'[^\n]')*);
 
   <BlockComment> = <'/*'> (BlockComment | (!'*/' AnyChar))* <'*/'>;
 

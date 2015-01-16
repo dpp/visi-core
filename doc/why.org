@@ -1,0 +1,169 @@
+#+TITLE:Why Visi?
+#+AUTHOR: David Pollak
+#+EMAIL: feeder.of.the.bears@gmail.com
+#+BABEL: :session *Clojure* :cache yes :results output graphics :exports both :tangle yes
+
+* Why Visi?
+** What is Visi?
+
+Visi is a computer language that allows expression of big data jobs
+in a syntax that's not frightening to people familiar with Excel formula functions.
+There is more in Visi than there is in Excel formula functions,
+but the "more" is adding to what's in Excel.
+
+Let's start with a simple expression... a thing that executes
+code and returns a value:
+
+#+BEGIN_SRC python
+ 1 + 1
+#+END_SRC
+
+That's simple, the expression evaluates to 2. Yay!
+
+In Excel, each cell is a variable... something that can contain
+a value. In Excel, cells can be constants (values that do not change)
+or formulas. If a cell contains a formula and that formula refers
+to another cell, when the predicate cell's value changes, all
+the dependent cells update their values.
+
+In Visi, you name the placeholders for values. They are called variables.
+So, to create a variable:
+
+#+BEGIN_SRC python
+
+x = 5
+
+y = x + 5
+
+#+END_SRC
+
+The above code created variables named "x" and "y". "x" is a constant
+and "y" is dependent on "x".
+
+In Visi and Excel, you can apply a function to a value:
+
+#+BEGIN_SRC python
+
+Math/sin(0.5)
+
+#+END_SRC
+
+In Visi, functions exist in separate packages so that it's easier
+to find a function you're looking for and sometimes, like in the
+above example, we have to be explicit about which package the
+function lives in.
+
+In Visi, you can create your own functions. So you can use
+the same logic in many places without having to copy/paste that logic
+over and over:
+
+#+BEGIN_SRC python
+
+calc_tax(income) = income * if(income > 5000, 40%, 20%)
+
+#+END_SRC
+
+And functions can call other functions:
+
+#+BEGIN_SRC python
+
+tax_rate(income) = if(income > 5000, 40%, 20%)
+
+calc_tax(income) = income * tax_rate(income)
+
+#+END_SRC
+
+Visi syntax can span multiple lines and if/then/else can be
+a formula and it has its own syntax that might be easier to read:
+
+#+BEGIN_SRC python
+
+tax_rate(income) =
+  if income > 5000 then
+    40%
+  else
+    20%
+
+calc_tax(income) = income * tax_rate(income)
+
+#+END_SRC
+
+And Visi code can contain comments so that you and others who
+read the code can understand what's going on:
+
+#+BEGIN_SRC python
+
+tax_rate(income) =
+  if income > 5000 then
+    40% ## for high incomes
+  else
+    20% ## for lower incomes
+
+calc_tax(income) = income * tax_rate(income)
+
+#+END_SRC
+
+In Visi, there are three constructs: expressions, declarations,
+and housekeeping.
+
+An expression is a value that's computed.
+Expressions can evaluate to either values or functions. Or
+more precisely, functions are values just like numbers and
+strings.
+
+A declaration is the association of a value with a name
+such that the named declaration (variable) can be accessed
+by other parts of your program. For example:
+
+#+BEGIN_SRC python
+
+Math/cos(Math/PI / 3) ## expression
+
+cos_third_pi = Math/cos(Math/PI / 3) ## declaration
+
+#+END_SRC
+
+Note that declaration of a function is just fancy syntax, both of
+the following declarations mean the same thing (don't worry about the
+function expression syntax for the moment):
+
+#+BEGIN_SRC python
+
+plus_one = x => x + 1
+
+plus_one(x) = x + 1
+
+#+END_SRC
+
+The first example, assigns the expression "x => x + 1" to "plus_one". That
+expression evaluates to a function. The second example does the same thing
+with different syntax. The latter is "syntactic sugar" for the former.
+
+You may be asking, "why do you have more than one way to say the same thing?"
+Good question. Visi creates syntactic sugar to give you a more concise
+or more natural way of expressing the same code. In different contexts,
+the different syntax may seem more natural. For example, the first
+declaration looks kind of odd where the second looks like the way we
+learned functions in math class. We will get to some examples of passing
+functions as parameters in a little while.
+
+In Visi, top level variables (those variables defined outside
+another variable declaration) can be accessed by any expression
+in a Visi program/notebook, just like values in cells in Excel.
+You can also declare variables that are only visible to expressions
+that come after the declaration in the expression. This allows
+you to compute an expression and use the result in many
+places within a larger expression. For example:
+
+#+BEGIN_SRC python
+
+test_income(income) =
+  mag = Math/log10(income) ## the magnitude of the income
+  if mag < 3 then "low"
+  else if mag < 5 then "med"
+  else "high"
+
+#+END_SRC
+
+We compute the value of "mag" and then reference that
+variable in the if/then/else tests.
