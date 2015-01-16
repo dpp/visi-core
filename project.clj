@@ -14,7 +14,7 @@
 
   :java-source-paths ["src/java"]
 
-  :java-agents [[dpp.rocks/manifest-destiny "0.2.0"]]
+  :java-agents [[dpp.rocks/manifest-destiny "0.2.1"]]
 
   :target-path "target/%s"
 
