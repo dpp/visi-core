@@ -235,13 +235,18 @@
   [it]
   (if (map? it) [it] it))
 
+(defn- find-op
+  "finds all the var references in the analyzed code"
+  [info op]
+  (if (= op (:op info))
+    [info]
+    (mapcat (fn [item] (mapcat #(find-op % op) (make-array-thing (item info)))) (:children info))
+    ))
+
 (defn- find-vars
   "finds all the var references in the analyzed code"
   [info]
-  (if (= :local (:op info))
-    [info]
-    (mapcat (fn [item] (mapcat find-vars (make-array-thing (item info)))) (:children info))
-    ))
+  (find-op info :local))
 
 (defn analyze-it
   [form the-env]
@@ -265,21 +270,19 @@
   (filter (fn [v]
             (let [var-name (:name v)
                   info (-> v :env :locals (get var-name))]
-              ;; (println "for " var-name " info " info)
               (= :binding (:op info)))
             ) the-vars))
 
-(defmacro a-i
-  "Analyze a block of code"
-  [form]
-  (println (->> (analyze-it form &env) find-vars find-bound (map :name)))
-  `(quote [~(->  (analyze-it form &env) keys)])
-
-  )
+(defn wrap-o-matic
+  "Wraps the form in a let statement. Used by the clean-it-up macro"
+  [lets form]
+  `(let [~@(mapcat
+              (fn [[name value]]
+                [(symbol name) value])
+              lets)] ~form))
 
 (defn clean-it-up
   [form the-env]
-  (println "Sym " (-> the-env vals first .sym .getClass))
   (let [analyzed
         (ca/analyze
          form
@@ -295,17 +298,13 @@
                (into {}))))
         emitted (e/emit-form analyzed {:qualified-symbols true :hygienic true} )
         bound (-> analyzed find-vars find-bound )
+        base `(quote (~'eval ~emitted))
         ]
-    (println "Bound " bound)
-    (if (empty? bound) `(quote (~'eval ~emitted))
-        `(quote
-          `(list `let [~@(for [local bound,
-                               let-arg [`(quote ~(:name local))
-                                        `(list `quote ~(:name  local))]]
-                           let-arg)]
-                 ~'eval ~emitted)))
-    )
-  )
+    (if (empty? bound)
+      base
+      `(visi.core.runtime/wrap-o-matic
+        [~@(map (fn [x] (let [s (:name x)] [(str s) s])) bound)]
+        ~base))))
 
 (defmacro clean-it-up-mac
   [form]
@@ -317,46 +316,46 @@
 
 (defmacro v-aggregate-by-key [this zero-value seq-op comb-op]
   `(ti-aggregate-by-key ~this ~zero-value
-                        (quote ~(clean-it-up seq-op &env))
-                        (quote ~(clean-it-up comb-op &env))))
+                        ~(clean-it-up seq-op &env)
+                        ~(clean-it-up comb-op &env)))
 (defmacro v-combine-by-key [this create-combiner merge-value merge-combiners]
-  `(ti-combine-by-key ~this (quote ~(clean-it-up create-combiner &env))
-                      (quote ~(clean-it-up merge-value &env))
-                      (quote ~(clean-it-up merge-combiners &env))))
+  `(ti-combine-by-key ~this ~(clean-it-up create-combiner &env)
+                      ~(clean-it-up merge-value &env)
+                      ~(clean-it-up merge-combiners &env)))
 (defmacro v-flat-map [this func]
-  `(ti-flat-map ~this (quote ~(clean-it-up func &env))))
+  `(ti-flat-map ~this ~(clean-it-up func &env)))
 (defmacro v-flat-map-double [this func]
-  `(ti-flat-map-double ~this (quote ~(clean-it-up func &env))))
+  `(ti-flat-map-double ~this ~(clean-it-up func &env)))
 (defmacro v-flat-map-pair [this func]
-  `(ti-flat-map-pair ~this (quote ~(clean-it-up func &env))))
+  `(ti-flat-map-pair ~this ~(clean-it-up func &env)))
 (defmacro v-flat-map-values [this func]
-  `(ti-flat-map-values ~this (quote ~(clean-it-up func &env))))
+  `(ti-flat-map-values ~this ~(clean-it-up func &env)))
 (defmacro v-fold-by-key [this zero-value func]
-  `(ti-fold-by-key ~this ~zero-value (quote ~(clean-it-up func &env))))
+  `(ti-fold-by-key ~this ~zero-value ~(clean-it-up func &env)))
 (defmacro v-fold [this zero func]
-  `(ti-fold ~this ~zero (quote ~(clean-it-up func &env))))
+  `(ti-fold ~this ~zero ~(clean-it-up func &env)))
 (defmacro v-foreach [this func]
-  `(ti-foreach ~this (quote ~(clean-it-up func &env))))
+  `(ti-foreach ~this ~(clean-it-up func &env)))
 (defmacro v-group-by [this func]
-  `(ti-group-by ~this (quote ~(clean-it-up func &env))))
+  `(ti-group-by ~this ~(clean-it-up func &env)))
 (defmacro v-key-by [this func]
-  `(ti-key-by ~this (quote ~(clean-it-up func &env))))
+  `(ti-key-by ~this ~(clean-it-up func &env)))
 (defmacro v-map-values [this func]
-  `(ti-map-values ~this (quote ~(clean-it-up func &env))))
+  `(ti-map-values ~this ~(clean-it-up func &env)))
 (defmacro v-map [this func]
-  `(ti-map ~this (quote ~(clean-it-up func &env))))
+  `(ti-map ~this ~(clean-it-up func &env)))
 (defmacro v-map-to-double [this func]
-  `(ti-map-to-double ~this (quote ~(clean-it-up func &env))))
+  `(ti-map-to-double ~this ~(clean-it-up func &env)))
 (defmacro v-map-to-pair [this func]
-  `(ti-map-to-pair ~this (quote ~(clean-it-up func &env))))
+  `(ti-map-to-pair ~this ~(clean-it-up func &env)))
 (defmacro v-reduce [this func]
-  `(ti-reduce ~this (quote ~(clean-it-up func &env))))
+  `(ti-reduce ~this ~(clean-it-up func &env)))
 (defmacro v-reduce-by-key [this func]
-  `(ti-reduce-by-key ~this (quote ~(clean-it-up func &env))))
+  `(ti-reduce-by-key ~this ~(clean-it-up func &env)))
 (defmacro v-filter [this func]
-  `(ti-filter ~this (quote ~(clean-it-up func &env))))
+  `(ti-filter ~this ~(clean-it-up func &env)))
 (defmacro v-sort-by [this func ascending]
-  `(ti-sort-by ~this (quote ~(clean-it-up func &env)) ascending))
+  `(ti-sort-by ~this ~(clean-it-up func &env) ascending))
 
 
 
@@ -365,7 +364,6 @@
 (defn app-params [] @-app-params)
 
 (defn set-app-params! [params]
-  (println "Setting app params to " params)
   (reset! -app-params params))
 
 (defmulti to-iterable class)
@@ -377,21 +375,6 @@
   (try
     (seq x)
     (catch Exception e [x])))
-
-#_(defn to-iterable
-  "Converts the thing to something that's Iterable"
-  [x]
-  (cond
-
-   (instance? JavaRDDLike x)
-   (.collect x)
-
-   (and
-    (vector? x)
-    (every? #(instance? JavaRDDLike %) x))
-   (mapcat #(.collect %) x)
-
-   ))
 
 (defn- record-access
   [info]

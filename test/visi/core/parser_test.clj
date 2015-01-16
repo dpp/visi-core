@@ -360,7 +360,20 @@ end")
       "Test evaluation"
     (t/is (= (vp/parse-and-eval-for-tests
               "x = [1, 2, 3]; map( (+ 1), x)")
-             (list 2 3 4))))
+             '(2 3 4)))
+
+    (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; map( (+ y), x)")
+             '(2 3 4)))
+
+    (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
+             '(2 3 4)))
+
+    (t/is (= (vp/parse-and-eval-for-tests "for([y, [1, 2, 3]], x = [1, 2, 3]; x |> map (+ y))")
+             '((2 3 4) (3 4 5) (4 5 6))))
+
+    )
 
   ;;
   )
