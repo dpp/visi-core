@@ -178,6 +178,9 @@ such that it becomes a valid Clojure expression."
 
   PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
 
+  PipeFunctionExpression = (SPACES* <'|>'> SPACES PipeCommands )+
+
+
   <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand |
                    Zipcommand | Dropcommand | Sortcommand |
                    Samplecommand | Foldcommand | Productcommand |
@@ -214,7 +217,7 @@ such that it becomes a valid Clojure expression."
 
   GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
 
-  EXPRESSION = EXPRESSION2 / Pipe2Expression / PipeExpression
+  EXPRESSION = EXPRESSION2 / Pipe2Expression / PipeExpression / PipeFunctionExpression
 
   EXPRESSION2 = BlockExpression / GetExpression /
   IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
@@ -267,7 +270,8 @@ such that it becomes a valid Clojure expression."
 
   NumberQualifier = ('%' | '#minutes' | '#hours' | '#seconds' | '#days');
 
-  MapExpr = SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?;
+  MapExpr =(SPACES? <'{'> SPACES? <'}'> SPACES?) /
+           (SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?);
 
   VectorExpr = SPACES? <'['> SPACES?  <']'> SPACES? |
                SPACES? <'['> (EXPRESSION <','>)* EXPRESSION (<','> SPACES?)? <']'> SPACES?;
@@ -349,6 +353,11 @@ such that it becomes a valid Clojure expression."
    :PipeExpression (fn [root & pipeline]
                      (let [x `x#]
                        `(~'as-> ~root ~x ~@(map #(% x) pipeline))))
+
+   :PipeFunctionExpression (fn [& pipeline]
+                             (let [x `x#
+                                   y `y#]
+                               `(fn [~y] (~'as-> ~y ~x ~@(map #(% x) pipeline)))))
 
    :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
 

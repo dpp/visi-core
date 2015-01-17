@@ -167,3 +167,83 @@ test_income(income) =
 
 We compute the value of "mag" and then reference that
 variable in the if/then/else tests.
+
+** Functions and Big Data
+
+Most Big Data processing is done based on a paradigm called "map/reduce".
+The paradigm takes a big pile of data and applies the same operation
+to each element of the data "mapping" or transforming each element of
+data. Then the collection of "mapped" data is "reduced" to an answer
+aggregating the mapped data in a "reduce" function.
+
+There is no state or other information shared between each call to the map
+function. This means that the map function can be run simultaneously on
+many different computers for different elements in the data set. Depending on
+the mathematical properties of the reduce phase, that phase may be
+run on different computers as well.
+
+Let's look at an example of computing the average of a collection of
+numbers using map/reduce:
+
+#+BEGIN_SRC python
+
+data = [1000, 10, 250000, 33] ## The data set
+
+mapped = map(identity, data) ## Don't change the elements
+
+reduced = reduce((acc, data) =>
+                  merge-with((+), ## Merge the accumulator and the current value
+                   acc, ## The accumulator
+                  {:cnt -> 1, ## The data to add to the accumulator
+                   :sum -> data}),
+                  {}, ## Starting value for the acculumator
+                  mapped) ## The data to reduce
+
+average = reduced.sum / reduced.cnt
+
+#+END_SRC
+
+The above code applies the "identity" function to each element in the
+set. The identity function returns the same value it took. So, the
+mapping phase results in the same collection that was input.
+
+FIXME -- explain reduce
+
+#+BEGIN_SRC python
+
+data = [1000, 10, 250000, 33] ## The data set
+
+mapped = map(# Math/log10(it), data) ## Don't change the elements
+
+reduced = reduce((acc, data) =>
+                  merge-with((+), ## Merge the accumulator and the current value
+                   acc, ## The accumulator
+                  {:cnt -> 1, ## The data to add to the accumulator
+                   :sum -> data}),
+                  {}, ## Starting value for the acculumator
+                  mapped) ## The data to reduce
+
+average = reduced.sum / reduced.cnt
+
+#+END_SRC
+
+FIXME
+
+Map/Reduce jobs can contain many map and reduce phases. Visi makes it really
+simple to define the pipeline as a series of function definitions and
+chaining operations.
+
+We can rewrite the above with:
+
+#+BEGIN_SRC python
+
+data = [1000, 10, 250000, 33] ## The data set
+
+reduced = data |>
+          map # Math/log10(it) |>
+          reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
+                                                            :sum -> data})
+
+average = reduced.sum / reduced.cnt
+
+#+END_SRC
