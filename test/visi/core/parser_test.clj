@@ -14,7 +14,7 @@
 (t/deftest
   test-parser
 
-  ;; warning: garbage syntax returns nil. todo, see
+  ;; todo. warning: garbage syntax fed to vp/parse-for-tests returns nil. Need to find a way that also check parser error, either write a function using instaparse, or retrieve from vp/parse-line. This needs to be applied to all tests.
   (t/testing
       "Test test garbage syntax"
     (t/is (= (vp/parse-for-tests "1 + 2 honuh ++ ** 7 *2 ;8") nil)))
@@ -48,7 +48,41 @@
     )
 
   (t/testing
-      "Test string"
+      "Test :Keyword"
+
+    ;; visi keyword is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
+
+    ;; Keyword = <':'> IDENTIFIER;
+    ;; :Keyword keyword
+
+    ;; (get-parsetree ":x")
+    ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Keyword [:IDENTIFIER "x"]]]]]]
+    ;; (get-transformed-result ":x")
+    ;; :x
+    ;; (keyword? (get-transformed-result ":x")) ; true
+
+    (t/is (= (vp/parse-for-tests ":x25707") ':x25707))
+    (t/is (= (vp/parse-for-tests ":p40689") ':p40689))
+
+    ;; (get-parsetree ":x :y") ; parse error
+    ;; (get-parsetree "x y") ; parse error
+    ;; (get-parsetree "3 4") ; parse error
+    ;; (get-parsetree "\"a\" \"b\"") ; parse error
+
+    )
+
+  (t/testing
+      "Test string StringLit."          ; todo, test all the backslash special case
+
+    ;; StringLit = #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
+    ;; :StringLit (fn [x] (let [c (count x)]
+    ;;                      (-> x
+    ;;                          (.substring 1 (- c 1))
+    ;;                          (.replace "\\\"" "\"")
+    ;;                          (.replace "\\n" "\n")
+    ;;                          (.replace "\\\\" "\\")
+    ;;                          (.replace "\\t" "\t"))))
+
     (t/is (= (vp/parse-for-tests "\"3\"") '"3"))
 
     (t/is (=
@@ -93,7 +127,7 @@
     )
 
   (t/testing
-      "Test ConstDef constant definition"
+      "Test constant definition ConstDef."
     (t/is (= (vp/parse-for-tests "x = 3") '(def x 3)))
     (t/is (= (vp/parse-for-tests "x=3") '(def x 3)))
     (t/is (= (vp/parse-for-tests "x= 3") '(def x 3)))
@@ -103,7 +137,7 @@
     )
 
   (t/testing
-      "Test block comment"
+      "Test block comment BlockComment."
 
     (t/is (= (vp/parse-for-tests "/* x y */") nil))
 
@@ -122,9 +156,8 @@
     ;; nested block comment
     (t/is (= (vp/parse-for-tests "/* x\ny /* x\ny  */ */") nil)))
 
-  ;; FIXME
   (t/testing
-      "Test block expression"
+      "Test block expression BlockExpression."
 
     (t/is (= (vp/parse-for-tests "begin
  4
@@ -143,14 +176,14 @@ end")
              '(do 4 7)))
 
     ;; (t/is (= (vp/parse-for-tests "begin
-    ;; x = 4;
-    ;; end")
-    ;;           '(do (def x 4))))
+;; x = 4;
+;; end")
+;;              '(do (def x 4))))
 
     )
 
   (t/testing
-      "Test Line comment"
+      "Test Line comment LineComment."
     (t/is (=
            (vp/parse-for-tests "##")
            (vp/parse-for-tests "## ")
@@ -160,7 +193,7 @@ end")
 
     (t/is (= (vp/parse-for-tests "2## 3") '2))
     (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(+ 1 2)))
-    (t/is (= (vp/parse-for-tests " ## x = 3") nil)) ; FIXME this is a java exception
+    (t/is (= (vp/parse-for-tests " ## x = 3") nil)) ; todo. need to check parse error instead of nil
     )
 
   (t/testing
@@ -175,7 +208,7 @@ end")
     )
 
   (t/testing
-      "Test Function definition"
+      "Test Function definition FuncDef."
     (t/is (= (vp/parse-for-tests "f(x, y) = x + y") '(defn f [x y] (+ x y))))
     (t/is (= (vp/parse-for-tests "f(x,y) = x+y") '(defn f [x y] (+ x y))))
     (t/is (= (vp/parse-for-tests "f(x)=3") '(defn f [x] 3))))
@@ -409,39 +442,128 @@ end")
     )
 
   (t/testing
-      "Test set data type"
+      "Test set data type"              ; todo
 
     (t/is (= (vp/parse-for-tests "#{}") '#{}))
 
     (t/is (= (vp/parse-for-tests "#{x, y}") '#{x y})))
 
-  ;; (t/testing
-  ;;  "Test pipe expression"
-  ;;  ;; todo
-  ;;  (t/is (=
-  ;;         (vp/pre-process-line "info |> map .toLowerCase")
-  ;;         "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+  (t/testing
+      "Test FunctionExpr1"
 
-  ;;  ;; (def lower
-  ;;  ;;      (.cache
-  ;;  ;;       (as-> info x__8942__auto__
-  ;;  ;;             (visi.core.runtime/v-map x__8942__auto__
-  ;;  ;;                                 (fn [z__8941__auto__]
-  ;;  ;;                                     (.toLowerCase z__8941__auto__))))))
+    ;; it has this form
+    ;; ‹x› => ‹expr›
+    ;; (‹x1›, ‹x2›, …) => ‹expr›
 
-  ;;  ;; (t/is (=
-  ;;  ;;        (vp/pre-process-line "sins = lower |> filter # (.contains(it, \"sin\") && not(.contains(it, \"sing\")))")
-  ;;  ;;        "(def sins (as-> lower x__8942__auto__ (visi.core.runtime/v-filter x__8942__auto__ (fn [it] (and (.contains it \"sin\") (not (.contains it \"sing\")))))))"))
+    ;; (get-transformed-result "f => 4")
+    ;; (fn [f] 4)
 
-  ;;  ;; sins-plus-god-or-christ = sins |> filter # begin
+    ;; (get-transformed-result "(x,y) => 4")
+    ;; (fn [x y] 4)
 
-  ;;  ;; twit = v/stream-into-watching((v/create-twitter-stream({:duration -> 5000})) |> map .getText |> map calc_sent |> filter # (1 < it.pos || 1 < it.neg) |> reduce | merge-with((+)))
+    ;; (get-transformed-result "(x,y,z) => 4")
+    ;; (fn [x y z] 4)
 
-  ;;  ;; lower-bible = (bible |> map .toLowerCase) >> # .cache(it)
+    ;; (get-transformed-result "(x,y,z) => x + 1")
+    ;; (fn [x y z] (+ x 1))
 
-  ;;  ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
+    ;; syntax parent is FunctionExpr
 
-  ;;  )
+    ;; (get-parsetree "f => 4")
+    ;; [:Line
+    ;;  [:EXPRESSION
+    ;;   [:EXPRESSION2
+    ;;    [:FunctionExpr1
+    ;;     [:IDENTIFIER "f"]
+    ;;     [:EXPRESSION
+    ;;      [:EXPRESSION2
+    ;;       [:ConstExpr
+    ;;        [:Number "4"]]]]]]]]
+
+    ;; (get-parsetree "(x) => 4")
+    ;; [:Line
+    ;;  [:EXPRESSION
+    ;;   [:EXPRESSION2
+    ;;    [:FunctionExpr1
+    ;;     [:IDENTIFIER "x"]
+    ;;     [:EXPRESSION
+    ;;      [:EXPRESSION2
+    ;;       [:ConstExpr
+    ;;        [:Number "4"]]]]]]]]
+
+    ;; ;; (get-parsetree "(x,y) => 4")
+
+    ;; [:Line
+    ;;  [:EXPRESSION
+    ;;   [:EXPRESSION2
+    ;;    [:FunctionExpr1
+    ;;     [:IDENTIFIER "x"]
+    ;;     [:IDENTIFIER "y"]
+    ;;     [:EXPRESSION
+    ;;      [:EXPRESSION2
+    ;;       [:ConstExpr
+    ;;        [:Number "4"]]]]]]]]
+
+    ;; (get-evaled-result "(x,y,z) => 4")
+    ;; #<parser_test$eval1483$fn__1484 visi.core.parser_test$eval1483$fn__1484@34cdfeca>
+
+    ;; so, FunctionExpr1 seems to be a lambda form.
+
+    (t/is (= (vp/parse-for-tests "f => 4") '(fn [f] 4) ))
+    (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn [x y] 4) ))
+
+    (t/is (= (vp/parse-for-tests "(x,y,z) => x + 1")  
+             (vp/parse-for-tests "(x ,y,z) => x + 1") 
+             (vp/parse-for-tests "(x, y,z) => x + 1")  
+             (vp/parse-for-tests "(x , y,z) => x + 1")  
+             (vp/parse-for-tests "(x , y ,z) => x + 1") 
+             '(fn [x y z] (+ x 1)) ))
+
+    ;; todo. find out what's the visi syntax to apply this result. add a eval test
+
+    )
+
+  (t/testing
+      "Test map command Mapcommand"     ; todo.
+
+    ;; Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
+    ;; :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
+    ;; parent
+    ;; <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand | Zipcommand | Dropcommand | Sortcommand | Samplecommand | Foldcommand | Productcommand | Groupbycommand
+    ;; children:
+    ;; <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
+
+    ;; (get-parsetree "map (+ 2)")         ; parse error
+    ;; (get-parsetree "map f")             ; parse error
+    ;; (get-parsetree "map f x")           ; parse error
+
+    ;; sample syntax
+    (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
+             '(2 3 4)))
+
+    )
+
+  (t/testing
+   "Test pipe expression PipeExpression" ; todo. work on Mapcommand first
+
+   ;; PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
+   ;; :PipeExpression (fn [root & pipeline]
+   ;;                   (let [x `x#]
+   ;;                     `(~'as-> ~root ~x ~@(map #(% x) pipeline))))
+
+   ;; (get-parsetree "[1, 2, 3] |> map (+ 2)") ; parse error
+
+   ;; sample syntax
+   (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
+             '(2 3 4)))
+
+   ;; (t/is (=
+   ;;        (vp/pre-process-line "info |> map .toLowerCase")
+   ;;        "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+
+   )
 
   (t/testing
       "Test DotFuncExpr"                ; todo
@@ -487,7 +609,7 @@ end")
     )
 
   (t/testing
-      "Test :GetExpression"                 ; todo
+      "Test GetExpression"                 ; todo
     ;; GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
     ;; :GetExpression (fn [a & b] `(~'-> ~a ~@(map (fn [z] `(~'get ~z)) b)))
 
@@ -496,8 +618,7 @@ end")
     (t/is (= (vp/parse-for-tests "x = [3,4,5]; x[2]")
              '(clojure.core/let [x [3 4 5]] (-> x (get 2)))))
 
-    ;; todo. need cases for map and other data type
-
+    ;; todo. double check if this can also be used for map or other data type
     (t/is (= (vp/parse-for-tests "x=[3]; x[2]")
              '(clojure.core/let [x [3]] (-> x (get 2)))))
     )
@@ -508,10 +629,6 @@ end")
     (t/is (= (vp/parse-for-tests "x=[3]; 2")
              '(clojure.core/let [x [3]] 2)))
 
-    )
-
-  (t/testing
-      "Test evaluation"
     (t/is (= (vp/parse-and-eval-for-tests
               "x = [1, 2, 3]; map( (+ 1), x)")
              '(2 3 4)))
@@ -534,3 +651,27 @@ end")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scratch pad
+
+(comment ;; random old sample visi code
+
+   ;; (def lower
+   ;;      (.cache
+   ;;       (as-> info x__8942__auto__
+   ;;             (visi.core.runtime/v-map x__8942__auto__
+   ;;                                 (fn [z__8941__auto__]
+   ;;                                     (.toLowerCase z__8941__auto__))))))
+
+   ;; (t/is (=
+   ;;        (vp/pre-process-line "sins = lower |> filter # (.contains(it, \"sin\") && not(.contains(it, \"sing\")))")
+   ;;        "(def sins (as-> lower x__8942__auto__ (visi.core.runtime/v-filter x__8942__auto__ (fn [it] (and (.contains it \"sin\") (not (.contains it \"sing\")))))))"))
+
+   ;; sins-plus-god-or-christ = sins |> filter # begin
+
+   ;; twit = v/stream-into-watching((v/create-twitter-stream({:duration -> 5000})) |> map .getText |> map calc_sent |> filter # (1 < it.pos || 1 < it.neg) |> reduce | merge-with((+)))
+
+   ;; lower-bible = (bible |> map .toLowerCase) >> # .cache(it)
+
+   ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
+
+)
+
