@@ -29,11 +29,8 @@
            7))
 
     (t/is (= (vp/parse-for-tests "3 + -4") '(+ 3 -4)))
-
     (t/is (= (vp/parse-for-tests "3 + -4.") '(+ 3 -4.0)))
-
     (t/is (= (vp/parse-for-tests "-3 + -4.") '(+ -3 -4.0)))
-
     (t/is (= (vp/parse-for-tests "-3 - -4") '(- -3 -4))))
 
   (t/testing
@@ -48,7 +45,7 @@
     )
 
   (t/testing
-      "Test :Keyword"
+      "Test Keyword"
 
     ;; visi keyword is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
 
@@ -93,6 +90,16 @@
     (t/is (=
            (vp/parse-for-tests "\"😸\"") ; unicode beyond BMP
            '"😸")))
+
+  (t/testing
+      "Test RegexLit"
+    ;; FIXME: the visi regex syntax doesn't seem to allow /. This means, user cannot search any string that contains slash, possibly unless they use embedded Unicode char syntax
+
+    (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/a.+/, \"abc\")") "abc" ))
+    (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/a/, \"b\")") nil ))
+    (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/.文/, \"中文\")") "中文" ))
+
+    )
 
   (t/testing
       "Test operator"
@@ -211,7 +218,42 @@ end")
       "Test Function definition FuncDef."
     (t/is (= (vp/parse-for-tests "f(x, y) = x + y") '(defn f [x y] (+ x y))))
     (t/is (= (vp/parse-for-tests "f(x,y) = x+y") '(defn f [x y] (+ x y))))
-    (t/is (= (vp/parse-for-tests "f(x)=3") '(defn f [x] 3))))
+    (t/is (= (vp/parse-for-tests "f(x)=3") '(defn f [x] 3)))
+
+    (t/testing
+        "Test FuncCall"
+
+      (t/is (=
+             (vp/parse-for-tests "f(x)")
+             (vp/parse-for-tests " f(x)")
+             (vp/parse-for-tests "f (x)")
+             (vp/parse-for-tests "f( x)")
+             (vp/parse-for-tests "f(x )")
+             '(f x)))
+
+      (t/is (=
+             (vp/parse-for-tests "g(x,y)")
+             (vp/parse-for-tests "g(x ,y)")
+             (vp/parse-for-tests "g(x, y)")
+             (vp/parse-for-tests "g(x,y )")
+             '(g x y)))
+
+      (t/is (=
+             (vp/parse-and-eval-for-tests "f(x, y) = x + y; f(3,4)")
+             '7 ))
+
+      (t/is (=
+             (vp/parse-for-tests "f(x, y) = x + y; f(3,4)")
+             '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4))
+             ))
+
+      (t/is (=
+             (vp/parse-for-tests "f(x, y) = x + y;f(3,4)")
+             '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4))
+             )) ; missing a space after semicolon cause error
+
+      )
+    )
 
   (t/testing
       "Test source syntax"              ; todo
@@ -260,7 +302,7 @@ end")
            "(def x60473 (do (visi.core.runtime/do-sink (quote x60473) y90940) y90940))")))
 
   (t/testing
-      "Test vector"
+      "Test vector VectorExpr"
 
     (t/is (= (vp/parse-for-tests "x = [3,4]") '(def x [3 4])))
 
@@ -316,7 +358,7 @@ end")
       ;; MergeExpr = EXPRESSION (SPACES <'%%'> SPACES Pair)+;
       ;; MapExpr = SPACES? <'{'> (Pair <','>)* Pair (<','> SPACES?)? <'}'> SPACES?;
 
-      ;; pair cannot be by itself accordig to grammar. 「(get-parsetree ".x ->2")」 is parser error. The possible parent of Pair is the merge expr and map expr. So, test Pair there.
+      ;; pair cannot be by itself accordig to grammar. 「(get-parsetree ".x ->2")」 is parser error. The possible parent of Pair is the MergeExpr and MapExpr. So, test Pair there.
 
       (comment
         "Test DottedThing"
@@ -442,7 +484,7 @@ end")
     )
 
   (t/testing
-      "Test set data type"              ; todo
+      "Test set data type SetExpr"              ; todo
 
     (t/is (= (vp/parse-for-tests "#{}") '#{}))
 
@@ -512,19 +554,19 @@ end")
     (t/is (= (vp/parse-for-tests "f => 4") '(fn [f] 4) ))
     (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn [x y] 4) ))
 
-    (t/is (= (vp/parse-for-tests "(x,y,z) => x + 1")  
-             (vp/parse-for-tests "(x ,y,z) => x + 1") 
-             (vp/parse-for-tests "(x, y,z) => x + 1")  
-             (vp/parse-for-tests "(x , y,z) => x + 1")  
-             (vp/parse-for-tests "(x , y ,z) => x + 1") 
+    (t/is (= (vp/parse-for-tests "(x,y,z) => x + 1")
+             (vp/parse-for-tests "(x ,y,z) => x + 1")
+             (vp/parse-for-tests "(x, y,z) => x + 1")
+             (vp/parse-for-tests "(x , y,z) => x + 1")
+             (vp/parse-for-tests "(x , y ,z) => x + 1")
              '(fn [x y z] (+ x 1)) ))
 
-    ;; todo. find out what's the visi syntax to apply this result. add a eval test
+    ;; todo. find out what's the visi syntax to apply function. Add a eval test
 
     )
 
   (t/testing
-      "Test map command Mapcommand"     ; todo.
+      "Test map command Mapcommand"     ; todo. incomplete understanding
 
     ;; Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
     ;; :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
@@ -545,25 +587,66 @@ end")
     )
 
   (t/testing
-   "Test pipe expression PipeExpression" ; todo. work on Mapcommand first
+      "Test pipe commands and expressions"
 
-   ;; PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
-   ;; :PipeExpression (fn [root & pipeline]
-   ;;                   (let [x `x#]
-   ;;                     `(~'as-> ~root ~x ~@(map #(% x) pipeline))))
+    ;; pipe related things are:
+  ;; Pipe2Expression = EXPRESSION2  (SPACES <'>>'> SPACES (FunctionExpr / EXPRESSION2))+;
+  ;; PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
+  ;; PipeFunctionExpression = (SPACES* <'|>'> SPACES PipeCommands )+
+  ;; <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand | Zipcommand | Dropcommand | Sortcommand | Samplecommand | Foldcommand | Productcommand | Groupbycommand
+    ;; the commands are children of the several pipe expressions, and pipe expressions are children of expression
 
-   ;; (get-parsetree "[1, 2, 3] |> map (+ 2)") ; parse error
+    (t/testing
+        "Test pipe expression PipeExpression" ; todo. work on Mapcommand first
 
-   ;; sample syntax
-   (t/is (= (vp/parse-and-eval-for-tests
-              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
-             '(2 3 4)))
+      ;; PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
+      ;; :PipeExpression (fn [root & pipeline]
+      ;;                   (let [x `x#]
+      ;;                     `(~'as-> ~root ~x ~@(map #(% x) pipeline))))
 
-   ;; (t/is (=
-   ;;        (vp/pre-process-line "info |> map .toLowerCase")
-   ;;        "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+      ;; (get-parsetree "[1, 2, 3] |> map (+ 2)") ; parse error
 
-   )
+      ;; sample syntax
+      (t/is (= (vp/parse-and-eval-for-tests
+                "x = [1, 2, 3]; y = 1; x |> map (+ y)")
+               '(2 3 4)))
+
+      ;; (t/is (=
+      ;;        (vp/pre-process-line "info |> map .toLowerCase")
+      ;;        "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+
+      )
+
+    (t/testing
+        "Test PipeFunctionExpression" ; todo. work on PipeCommands first. PipeCommands is made of several commands. PipeCommands itself doesn't have a transform rule. PipeCommands's parent is: PipeExpression, PipeFunctionExpression
+
+      ;; PipeFunctionExpression = (SPACES* <'|>'> SPACES PipeCommands )+
+      ;; :PipeFunctionExpression (fn [& pipeline]
+      ;;                           (let [x `x#
+      ;;                                 y `y#]
+      ;;                             `(fn [~y] (~'as-> ~y ~x ~@(map #(% x) pipeline)))))
+
+      ;; parent grammar rule is EXPRESSION, and that's it
+      ;; todo. find something that allow EXPRESSION to find a syntax that covers this
+
+      ;; (get-parsetree "|> x")                  ; parse error
+      ;; (get-parsetree "3 |> x")                ; parse error
+      ;; (get-parsetree "3 |> map")              ; parse error
+
+      ;; todo find a way to match form
+      (t/is (not=
+             (vp/parse-for-tests "x |> map (+ y)")
+             nil
+             ;; '(as-> x x__30__auto__ (visi.core.runtime/v-map x__30__auto__ (fn [x__34__auto__] (+ x__34__auto__ y))))
+             ))
+
+      (t/is (not=
+             (vp/parse-for-tests "x |> map f")
+             nil
+             ;; '(as-> x x__30__auto__ (visi.core.runtime/v-map x__30__auto__ (fn [x__34__auto__] (+ x__34__auto__ y))))
+             ))
+
+      ))
 
   (t/testing
       "Test DotFuncExpr"                ; todo
@@ -609,6 +692,39 @@ end")
     )
 
   (t/testing
+      "Test IfElseExpr"
+
+    ;; :IfElseExpr (fn [test a b] `(~'if ~test ~a ~b))
+
+    ;; IfElseExpr has 3 forms.
+    ;; ①  「if( ‹test›, ‹true body› , ‹false body›) 」
+    ;;  note: no space after “if”
+    ;; ② 「if ‹test› then ‹true body› else ‹else body›」
+    ;; and a C-syntax
+    ;; ③ 「(‹test› ? ‹true body› : ‹else body›)」
+
+    ;; todo, for forms ② and ③, the ‹else body› also allow (OprExpression / EXPRESSION). look into that
+    ;; note: there's no just “if then” without “else”
+
+    ;; test basic forms
+    (t/is (=
+           (vp/parse-for-tests "if( 3, 4, 5)")
+           (vp/parse-for-tests "if 3 then 4 else 5")
+           (vp/parse-for-tests "(3 ? 4 : 5)")
+           '(if 3 4 5)
+           ))
+    ;; todo. add more test on extra space/newline variations in different places
+
+    (t/is (=
+           (vp/parse-and-eval-for-tests "if( 3, 4, 5)")
+           (vp/parse-and-eval-for-tests "if 3 then 4 else 5")
+           (vp/parse-and-eval-for-tests "(3 ? 4 : 5)")
+           '4
+           ))
+
+    )
+
+  (t/testing
       "Test GetExpression"                 ; todo
     ;; GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
     ;; :GetExpression (fn [a & b] `(~'-> ~a ~@(map (fn [z] `(~'get ~z)) b)))
@@ -622,6 +738,42 @@ end")
     (t/is (= (vp/parse-for-tests "x=[3]; x[2]")
              '(clojure.core/let [x [3]] (-> x (get 2)))))
     )
+
+(t/testing "Test Foldcommand" ; todo
+    )
+
+(t/testing "Test Flatmapcommand" ; todo
+    )
+
+(t/testing "Test Filtercommand" ; todo
+    )
+
+(t/testing "Test Groupbycommand" ; todo
+    )
+
+(t/testing "Test Sortcommand" ; todo
+    )
+
+(t/testing "Test ParenExpr" ; todo
+  ;; ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
+    )
+
+(t/testing "Test InlineFunc" ; todo
+    )
+
+;; OprExpression identity
+;; ConstDef identity
+;; ConstDef1
+;; Pipe2Expression
+;; HashFunctionExpr
+;; PartialFunction
+;; Partial1
+;; Partial2
+;; Partial3
+;; EXPRESSION identity
+;; EXPRESSION2 identity
+;; IDENTIFIER
+;; ClojureSymbol symbol
 
   (t/testing
       "Test parser, misc"
@@ -652,6 +804,69 @@ end")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scratch pad
 
+(comment ; visi code examples
+
+;; calc_tax(income) = income * if(income > 5000, 40%, 20%)
+
+;; tax_rate(income) =
+;;   if income > 5000 then
+;;     40%
+;;   else
+;;     20%
+
+;; calc_tax(income) = income * tax_rate(income)
+
+  ;; find where Math/cos came from in visi
+;; Math/cos(Math/PI / 3) ## expression
+;; cos_third_pi = Math/cos(Math/PI / 3) ## declaration
+
+ ;; assign a lambda to a var
+;; plus_one = x => x + 1
+
+ ;; normal function def
+;; plus_one(x) = x + 1
+
+ ;; a more complex function def
+ ;; note the  “if then else else” and nested if
+
+    ;; test_income(income) =
+    ;;   mag = Math/log10(income) ## the magnitude of the income
+    ;;   if mag < 3 then "low"
+    ;;   else if mag < 5 then "med"
+    ;;   else "high"
+
+;;; big chunk code example.
+ ;; note the use of map, and reduce. Also, the merge-with, the 「(+)」, the lambda, the map.
+ ;; note the use of  「‹var name›.sum」 to retrieve.
+;; Study in detail
+
+    ;; data = [1000, 10, 250000, 33] ## The data set
+
+    ;; mapped = map(identity, data) ## Don't change the elements
+
+    ;; reduced = reduce((acc, data) =>
+    ;;                   merge-with((+), ## Merge the accumulator and the current value
+    ;;                    acc, ## The accumulator
+    ;;                   {:cnt -> 1, ## The data to add to the accumulator
+    ;;                    :sum -> data}),
+    ;;                   {}, ## Starting value for the acculumator
+    ;;                   mapped) ## The data to reduce
+
+    ;; average = reduced.sum / reduced.cnt
+
+;; the above can also be written as
+
+    ;; data = [1000, 10, 250000, 33] ## The data set
+
+    ;; reduced = data |>
+    ;;           map # Math/log10(it) |>
+    ;;           reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
+    ;;                                                             :sum -> data})
+
+    ;; average = reduced.sum / reduced.cnt
+
+)
+
 (comment ;; random old sample visi code
 
    ;; (def lower
@@ -674,4 +889,3 @@ end")
    ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
 
 )
-
