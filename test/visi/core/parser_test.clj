@@ -34,7 +34,7 @@
   (t/is (= (vp/parse-for-tests "-3 - -4") '(- -3 -4))))
 
  (t/testing
-  "Test number quantifier"
+  "Test NumberQualifier"
   (t/is (= (vp/parse-for-tests "2%") '1/50))
   (t/is (= (vp/parse-for-tests "2.%") '0.02))
   (t/is (= (vp/parse-for-tests "1#seconds") 1000))
@@ -50,19 +50,28 @@
   (t/is (= (vp/parse-for-tests ":x25707") ':x25707))
   (t/is (= (vp/parse-for-tests ":p40689") ':p40689))
 
-  ;; note: keywords cannot happen together, such as 「:x :y」, unlike Clojure.
-  ;; (get-parsetree ":x :y") ; parse error
-  ;; (get-parsetree "x y") ; parse error
-  ;; (get-parsetree "3 4") ; parse error
-  ;; (get-parsetree "\"a\" \"b\"") ; parse error
+  ;; note: keywords cannot happen together, such as 「:x :y」, unlike Clojure. For example, the following are illegal syntax: 「:x :y」「x y」 「3 4」「"a" "b"」
 
   )
 
  (t/testing
-  "Test string StringLit." ; todo, test all the backslash special case
+  "Test StringLit." ; todo, test all the backslash special case
+
   (t/is (= (vp/parse-for-tests "\"3\"") '"3"))
-  (t/is (= (vp/parse-for-tests "\"3\n4\"") '"3\n4"))
-  (t/is (= (vp/parse-for-tests "\"😸\"") '"😸"))) ;unicode beyond BMP
+  (t/is (=
+         (vp/parse-for-tests "\"3\n4\"")
+         (vp/parse-for-tests "\"3
+4\"")
+         '"3\n4"))
+
+  (t/is (=
+         (vp/parse-for-tests "\"3\t4\"")
+         (vp/parse-for-tests "\"3	4\"")
+         '"3\t4"))
+
+  (t/is (= (vp/parse-for-tests "\"😸\"") '"😸")) ; unicode beyond BMP
+
+  )
 
  (t/testing
   "Test RegexLit"
@@ -205,7 +214,7 @@ x = 4;
 
   (t/testing
    "Test FuncCall"
-
+   ;; FuncCall has the form 「‹f›(‹x1›,‹x2›,…)」
    (t/is (=
           (vp/parse-for-tests "f(x)")
           (vp/parse-for-tests " f(x)")
@@ -273,7 +282,8 @@ x = 4;
 
  (t/testing
   "Test map data type, the MapExpr"
-  ;; Map Expr has the form 「{‹key1› -> ‹value1›, ‹key2› -> ‹value2›, …}」, where the key is any of 「"‹x›"」, 「".‹x›"」, and possibly something else. Most likely, only 「"‹x›"」 is semantically valid form for key
+  ;; Map Expr has the form 「{‹key1› -> ‹value1›, ‹key2› -> ‹value2›, …}」, where the key is 「:‹x›」.  Note, syntaciallly, the key can also be string as in 「"x"」 or 「.x」, but these may not be semantically valid.
+  ;; (get-parsetree "{:xx -> 3, :yy -> 4}")
   ;; (get-parsetree "{\"xx\" -> 3, \"yy\" -> 4}")
   ;; (get-parsetree "{.xx -> 3, .yy -> 4}")
 
@@ -289,6 +299,7 @@ x = 4;
     ;; dotted thing cannot be by itself according to grammar spec. The only parent of dotted thing is Pair. So, test for pair instead.
     ))
 
+  ;; test extra spaces
   (t/is (=
          (vp/parse-for-tests "x = {\"a\" -> 7 , \"b\" -> 8}")
          (vp/parse-for-tests "x = {\"a\"-> 7 , \"b\" -> 8}")
@@ -298,26 +309,9 @@ x = 4;
          (vp/parse-for-tests "x = {\"a\" -> 7 ,\"b\" -> 8}")
          '(def x {"a" 7, "b" 8})))
 
-  (t/is (=
-         (vp/parse-for-tests "x = {y -> 7}")
-         '(def x {y 7})))
-
-  (t/is (=
-         (vp/parse-for-tests "x = {.y -> 7}")
-         '(def x {:y 7})))
-
-  (t/is (=
-         (vp/parse-for-tests "x = {\"y\" -> 7}")
-         '(def x {"y" 7})))
-
-  ;; todo.
-  ;; find the proper semantically valid form, one of
-  ;; {y -> 8}
-  ;; {.y -> 8}
-  ;; {"y" -> 8}
-  ;; see test for FieldExpr
-
-  ;; todo. set visi map to var, then retrieve a field. see FieldExpr test
+  (t/is (= (vp/parse-and-eval-for-tests "{:y -> 7}") '{:y 7} ))
+  (t/is (= (vp/parse-and-eval-for-tests "{.y -> 7}") '{:y 7} ))
+  (t/is (= (vp/parse-and-eval-for-tests "{\"y\" -> 7}") '{"y" 7} ))
 
   (t/testing
    "Test FieldExpr. Retrieve map item."
@@ -329,17 +323,13 @@ x = 4;
 
    (t/is (= (vp/parse-for-tests "x .y") '(-> x (get :y))))
 
-   ;; this doesn't make sense
-   (t/is (= (vp/parse-for-tests "x = {\"y\" -> 7}; x .y")
-            '(clojure.core/let [x {"y" 7}] (-> x (get :y)))))
+   (t/is (=
+          (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
+          (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
+          7))
 
-   ;; question: find out just exactly what's a key in visi's map data type. FieldExpr implies that it is .key , but MapExpr allows both .key and "key". But only the .key form makes sense when used with FieldExpr
-   (t/is (= (vp/parse-for-tests "x = {.y -> 7}; x .y")
-            '(clojure.core/let [x {:y 7}] (-> x (get :y)))))
-   ;; quostion: why is this in a “let”? isn't assgnment global?
-
-   (t/is (= (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
-            '7)))
+   ;; (vp/parse-and-eval-for-tests "{:y -> 7} .y") ;error.
+   )
 
   (t/testing
    "Test MergeExpr"
@@ -415,8 +405,9 @@ x = 4;
             '(fn [x y z] (+ x 1))))
 
    (t/is (= (vp/parse-and-eval-for-tests "f = (x,y) => x + y; f(3,4)") 7 ))
-   ;; todo. find out if there a way to apply function in visi, without assignment first
-
+   (t/is (= (apply (vp/parse-and-eval-for-tests "(x) => x + 1") 3 '()) 4 )) ; apply
+   (t/is (= (vp/parse-and-eval-for-tests "apply((x) => x + 1, [4])") 5 ))
+  ;
    )
 
   (t/testing
@@ -429,7 +420,7 @@ x = 4;
    (t/is
     (let [form (vp/parse-for-tests ".x")]
       (comment '(fn [z__29__auto__] (.x z__29__auto__))
-               ;; todo. find a better way to match form
+               ;; todo. find a way to match form
                )
       (= (first form) 'fn )
       (vector? (second form))
@@ -440,91 +431,97 @@ x = 4;
    (t/is (= (vp/parse-and-eval-for-tests ".codePointAt (\"a\", 0)") '97 ))))
 
  (t/testing
-  "Test Mapcommand" ; todo. incomplete understanding
-
-  ;; map command is one of the pipe commands. By itself, is not a valid syntax. Its syntactic ancestor that is a valid visi form is is expression.
-
-  ;; Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
-
-  ;; sample syntax
-  (t/is (= (vp/parse-and-eval-for-tests
-            "x = [1, 2, 3]; y = 1; x |> map (+ y)")
-           '(2 3 4)))
-
-  (t/is (= (vp/parse-and-eval-for-tests
-            "x = [1, 2, 3]; y = 1; x |> xform (+ y)")
-           '(2 3 4))))
-
- (t/testing
   "Test pipe commands and expressions"
-
-  ;; simplified grammar
   ;; Pipe2Expression = EXPRESSION2 >>  (FunctionExpr / EXPRESSION2)
   ;; PipeExpression = (ParenExpr / IDENTIFIER)  |> PipeCommands
   ;; PipeFunctionExpression = |> PipeCommands
 
   (t/testing
-   "Test PipeExpression" ; todo. work on Mapcommand first
+   "Test Pipe2Expression" ; >> todo
+   )
 
-   ;; (get-parsetree "x |> map f")
-   ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Mapcommand [:IDENTIFIER "f"]]]]]
+  (t/testing
+   "Test PipeExpression"
+   ;; PipeExpression basically pass a argument to the visi pipecommands
+   (t/is (= (vp/parse-and-eval-for-tests "x = [1, 4]; x |> map (+ 2)") '(3 6)))
 
-   ;; (get-parsetree "x |> map (+ y)")
-   ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Mapcommand [:Partial3 [:Operator [:Op3 "+"]] [:EXPRESSION [:EXPRESSION2 [:IDENTIFIER "y"]]]]]]]]
+   ;; (vp/parse-and-eval-for-tests "[1, 2, 3] |> map (+ 2)") ; parse error. This should work?
 
-   ;; (vp/parse-for-tests "x |> map (+ y)")
-   ;; (as-> x x__30__auto__
-   ;;       (visi.core.runtime/v-map x__30__auto__
-   ;;                                (fn [x__37__auto__]
-   ;;                                  (+ x__37__auto__ y))))
+   (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map (x) => .toLowerCase(x)" )
+            '("cd" "ab")))
+
+   (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map .toLowerCase" )
+            '("cd" "ab")))
+   ;; todo. PipeExpression also takes a ParenExpr in front. test that. In that form, it seems to take a function (because ParenExpr is a function)
+   )
+
+  (t/testing
+   "Test PipeFunctionExpression"
+   ;; has the form 「|> ‹pipecommands›」. e.g. 「|> map (+ 1)」 it creates a function of 1 arg, this 「‹pipecommands›(arg)」
+
+   (t/is (= (vp/parse-and-eval-for-tests "apply(|> map (+ 1), [[3,4,5]])")
+            '(4 5 6)))
+   ;;
+
+   )
+
+  (t/testing
+   "Test Mapcommand"
+   ;; map command is one of the visi pipe commands. By itself, is not a valid syntax. Must be used as part of PipeCommands
 
    ;; sample syntax
    (t/is (= (vp/parse-and-eval-for-tests
              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
             '(2 3 4)))
 
-   ;; (t/is (=
-   ;;        (vp/pre-process-line "info |> map .toLowerCase")
-   ;;        "(def lower (.cache (as-> info x__8942__auto__ (visi.core.runtime/v-map x__8942__auto__ (fn [z__8941__auto__] (.toLowerCase z__8941__auto__))))))"))
+   (t/is (= (vp/parse-and-eval-for-tests
+             "x = [1, 2, 3]; y = 1; x |> xform (+ y)")
+            '(2 3 4))))
+
+  (t/testing
+   "Test Sortcommand"
+
+   ;; sort command has the form
+   ;; 「sort ‹x›」
+   ;; 「sort ‹x›,ascending 」 (note, no space after comma) FIXME?
+   ;; 「sort ‹x›,declaration 」
+   ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
+   ;; sort command cannot be by itself. it's part of pipecommands, and ultimately, part of PipeExpression and PipeFunctionExpression
+
+   ;; (get-parsetree "x |> sort y")
+   ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
+
+   ;; (get-transformed-result "x |> sort y")
+   ;; (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ y true))
+
+   ;; (get-transformed-result "x |> sort (x,y) => x > y")
+   ;; (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [x y] x) true)) y)
+
+   ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
+   ;; (clojure.core/let [x [8 3 4]] (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [aa bb] aa) true)) bb))
+
+   ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb") ; java exception
+
+  ; todo. figure out the semantics of sort
 
    )
 
-  (t/testing
-   "Test Pipe2Expression" ; todo
-   )
+  (t/testing "Test Foldcommand" ; todo
+             )
+  
+  (t/testing "Test Flatmapcommand" ; todo
+             )
 
-  (t/testing
-   "Test PipeFunctionExpression" ; todo. work on PipeCommands first. PipeCommands is made of several commands. PipeCommands itself doesn't have a transform rule. PipeCommands's parent is: PipeExpression, PipeFunctionExpression
+  (t/testing "Test Filtercommand" ; todo
+             )
 
-   ;; PipeFunctionExpression = (SPACES* <'|>'> SPACES PipeCommands )+
-   ;; :PipeFunctionExpression (fn [& pipeline]
-   ;;                           (let [x `x#
-   ;;                                 y `y#]
-   ;;                             `(fn [~y] (~'as-> ~y ~x ~@(map #(% x) pipeline)))))
-
-   ;; parent grammar rule is EXPRESSION, and that's it
-   ;; todo. find something that allow EXPRESSION to find a syntax that covers this
-
-   ;; (get-parsetree "|> x")                  ; parse error
-   ;; (get-parsetree "3 |> x")                ; parse error
-   ;; (get-parsetree "3 |> map")              ; parse error
-
-   ;; todo find a way to match form
-   (t/is (not=
-          (vp/parse-for-tests "x |> map (+ y)")
-          nil
-          ;; '(as-> x x__30__auto__ (visi.core.runtime/v-map x__30__auto__ (fn [x__34__auto__] (+ x__34__auto__ y))))
-          ))
-
-   (t/is (not=
-          (vp/parse-for-tests "x |> map f")
-          nil
-          ;; '(as-> x x__30__auto__ (visi.core.runtime/v-map x__30__auto__ (fn [x__34__auto__] (+ x__34__auto__ y))))
-          ))))
+  (t/testing "Test Groupbycommand" ; todo
+             )
+  ;
+  )
 
  (t/testing
   "Test IfElseExpr"
-
   ;; :IfElseExpr (fn [test a b] `(~'if ~test ~a ~b))
 
   ;; IfElseExpr has 3 forms.
@@ -534,7 +531,7 @@ x = 4;
   ;; and a C-syntax
   ;; ③ 「(‹test› ? ‹true body› : ‹else body›)」
 
-  ;; todo, for forms ② and ③, the ‹else body› also allow (OprExpression / EXPRESSION). Not sure why, perhaps for some precedence quirk?
+  ;; todo, for forms ② and ③, the ‹else body› also allow (OprExpression / EXPRESSION). Not sure why, perhaps for some precedence?
   ;; note: there's no just “if then” without “else”
 
   ;; test basic forms
@@ -557,53 +554,177 @@ then 4 else 5") ; FIXME
          )))
 
  (t/testing
-  "Test GetExpression" ; todo
-  ;; GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
-  ;; :GetExpression (fn [a & b] `(~'-> ~a ~@(map (fn [z] `(~'get ~z)) b)))
+  "Test GetExpression"
+  ;; has the form 「‹x›[‹y1›]」, 「‹x›[‹y1›][‹y2›]」, 「‹x›[‹y1›][‹y2›][‹y3›]」, …. It can be used on vector data type and map data type
 
   (t/is (= (vp/parse-for-tests "x[2]") '(-> x (get 2))))
 
-  (t/is (= (vp/parse-for-tests "x = [3,4,5]; x[2]")
-           '(clojure.core/let [x [3 4 5]] (-> x (get 2)))))
+  (t/is (= (vp/parse-for-tests "x[2][3]") '(-> x (get 2) (get 3))))
 
-  ;; todo. double check if this can also be used for map or other data type
-  (t/is (= (vp/parse-for-tests "x=[3]; x[2]")
-           '(clojure.core/let [x [3]] (-> x (get 2))))))
+  (t/is (= (vp/parse-and-eval-for-tests "x=[3]; x[0]")
+           (vp/parse-and-eval-for-tests "x=[2,[3]]; x[1][0]")
+           (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x[:a]")
+           '3)))
 
- (t/testing "Test Foldcommand" ; todo
-            )
+ (t/testing
+  "Test ParenExpr"
+  ;; ParenExpr has one of the following form
+  ;; Partial1 has this form 「(‹operator›)」
+  ;; Partial2 has this form 「(‹expr› ‹operator›) 」
+  ;; Partial3 has this form 「(‹operator› ‹expr›)」
+  ;; 「(‹expr›)」
 
- (t/testing "Test Flatmapcommand" ; todo
-            )
+  ;; here's the parse tree showing each form
 
- (t/testing "Test Filtercommand" ; todo
-            )
+  ;; (get-parsetree "(+)")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial1 [:Operator [:Op3 "+"]]]]]]]
 
- (t/testing "Test Groupbycommand" ; todo
-            )
+  ;; (get-parsetree "(3+)")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial2 [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]] [:Operator [:Op3 "+"]]]]]]]
 
- (t/testing "Test Sortcommand" ; todo
-            )
+  ;; (get-parsetree "(+3)")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial3 [:Operator [:Op3 "+"]] [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]]]]]
 
- (t/testing "Test ParenExpr" ; todo
-            ;; ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
-            )
+  ;; (get-parsetree "(3)")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]]]]
 
- (t/testing "Test InlineFunc" ; todo
-            )
+  ;; here's their transformed result
+  ;; (get-transformed-result "(+)")
+  ;; '+
 
- (t/testing "Test ClojureSymbol" ; todo
+  ;; (get-transformed-result "(3+)")
+  ;; '(fn [x__36__auto__] (+ 3 x__36__auto__))
 
-            ;; (get-parsetree "x")
-            ;; [:Line [:EXPRESSION [:EXPRESSION2 [:IDENTIFIER "x"]]]]
-            ;; (get-parsetree "list")
-            ;; [:Line [:EXPRESSION [:EXPRESSION2 [:IDENTIFIER "list"]]]]
-            ;; (get-parsetree "clojure.core/list")
-            ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ClojureSymbol "clojure.core/list"]]]]
+  ;; (get-transformed-result "(+3)")
+  ;; '(fn [x__37__auto__] (+ x__37__auto__ 3))
 
-            (t/is (= (vp/parse-for-tests "clojure.core/list")
-                     'clojure.core/list
-                     )))
+  ;; (get-transformed-result "(3)")
+  ;; '3
+
+  ;; the ParenExpr seems to serve 2 purposes.
+  ;; ① when using paren to specify eval order
+  ;; ② when in the form 「(‹expr› ‹operator›) 」 , it creates a function that behaves like 「‹expr› ‹operator› ‹arg›」.
+  ;; Similarly,  when  in the form 「(‹operator› ‹expr›)」 , it creates a function that behaves like 「‹arg› ‹operator› ‹expr›」.
+
+  ;; here's example for eval order
+
+  ;; (get-parsetree "(3+2)")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]] [:Op3 "+"] [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "2"]]]]]]]]]]]]]]]]]]]]]
+
+  ;; (get-parsetree "(3+2)/4")
+  ;; [:Line [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]] [:Op3 "+"] [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "2"]]]]]]]]]]]]]]]]]]]]] [:Op2 "/"] [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "4"]]]]]]]]]]]]]]]]]]
+
+  (t/is (= ((vp/parse-and-eval-for-tests "(+)") 3 4) '7))
+
+  (t/is (= ((vp/parse-and-eval-for-tests "(3+)") 4) '7))
+
+  (t/is (= ((vp/parse-and-eval-for-tests "(/3)") 4) '4/3 ))
+
+  (t/is (= (vp/parse-and-eval-for-tests "(3)") '3)) ;
+  )
+
+ (t/testing
+  "Test InlineFunc"
+
+  ;; inline func has the form 「‹def›; ‹expr›」
+  ;; where the ‹def› is either a constant definition such as 「x=3」 or function definition such as 「f(x) = x+1 」
+  ;; inline func is part of grammar rule EXPRESSION
+
+  ;; (get-transformed-result "x = 3; x")
+  ;; [:InlineFunc '(def x 3) 'x]
+
+  ;; (get-transformed-result "x = 3; y = 4; 5")
+  ;; [:InlineFunc '(def x 3) [:InlineFunc '(def y 4) '5]]
+
+  ;; (get-transformed-result "f(x)=3; x")
+  ;; [:InlineFunc '(defn f [x] 3) 'x]
+
+  ;; (get-parsetree "x = 3; x")
+  ;; [:Line
+  ;;  [:EXPRESSION
+  ;;   [:EXPRESSION2
+  ;;    [:InlineFunc
+  ;;     [:ConstDef
+  ;;      [:ConstDef1
+  ;;       [:IDENTIFIER "x"]
+  ;;       [:EXPRESSION
+  ;;        [:EXPRESSION2
+  ;;         [:ConstExpr
+  ;;          [:Number "3"]]]]]]
+  ;;     [:EXPRESSION
+  ;;      [:EXPRESSION2
+  ;;       [:IDENTIFIER "x"]]]]]]]
+
+  ;; (get-parsetree "f(x)=3; x")
+  ;; [:Line
+  ;;  [:EXPRESSION
+  ;;   [:EXPRESSION2
+  ;;    [:InlineFunc
+  ;;     [:FuncDef
+  ;;      [:IDENTIFIER "f"]
+  ;;      [:IDENTIFIER "x"]
+  ;;      [:EXPRESSION
+  ;;       [:EXPRESSION2
+  ;;        [:ConstExpr
+  ;;         [:Number "3"]]]]]
+  ;;     [:EXPRESSION
+  ;;      [:EXPRESSION2
+  ;;       [:IDENTIFIER "x"]]]]]]]
+
+  ;; (get-parsetree "f(x)=3; f(4)")
+  ;; [:Line
+  ;;  [:EXPRESSION
+  ;;   [:EXPRESSION2
+  ;;    [:InlineFunc
+  ;;     [:FuncDef
+  ;;      [:IDENTIFIER "f"]
+  ;;      [:IDENTIFIER "x"]
+  ;;      [:EXPRESSION
+  ;;       [:EXPRESSION2
+  ;;        [:ConstExpr
+  ;;         [:Number "3"]]]]]
+  ;;     [:EXPRESSION
+  ;;      [:EXPRESSION2
+  ;;       [:FuncCall
+  ;;        [:IDENTIFIER "f"]
+  ;;        [:EXPRESSION
+  ;;         [:EXPRESSION2
+  ;;          [:ConstExpr
+  ;;           [:Number "4"]]]]]]]]]]]
+
+  (t/is (= (vp/parse-for-tests "x = 3; x")
+           '(clojure.core/let [x 3] x)))
+
+  (t/is (= (vp/parse-for-tests "f(x)=3; x")
+           '(clojure.core/let [f (clojure.core/fn [x] 3)] x)))
+
+  (t/is (= (vp/parse-and-eval-for-tests "f(x)=3; f(4)")
+           3)))
+
+ (t/testing
+  "Test ClojureSymbol"
+
+  ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
+
+  (t/is (= (vp/parse-for-tests "x/y")
+           'x/y
+           ))
+
+  (t/is (= (vp/parse-for-tests "x.y/b")
+           'x.y/b
+           ))
+
+  (t/is (= (vp/parse-for-tests "x/y/z")
+           '(/ x y/z))) ; this becomes division
+
+  (t/is (= (vp/parse-for-tests "x/y/z/a")
+           '(/ x (/ y/z a)))) ; nested division
+
+  (t/is (= (vp/parse-for-tests "x/y(m)")
+           '(x/y m)))
+
+  (t/is (= (vp/parse-and-eval-for-tests "clojure.core/list(3,4,5)")
+           '(3 4 5))))
 
  (t/testing
   "Test parser, misc"
@@ -669,18 +790,16 @@ then 4 else 5") ; FIXME
 ;; Study in detail
 
     ;; data = [1000, 10, 250000, 33] ## The data set
-
     ;; mapped = map(identity, data) ## Don't change the elements
-
-    ;; reduced = reduce((acc, data) =>
-    ;;                   merge-with((+), ## Merge the accumulator and the current value
-    ;;                    acc, ## The accumulator
-    ;;                   {:cnt -> 1, ## The data to add to the accumulator
-    ;;                    :sum -> data}),
-    ;;                   {}, ## Starting value for the acculumator
-    ;;                   mapped) ## The data to reduce
-
+    ;; reduced = reduce((acc, data) => merge-with((+), acc, {:cnt -> 1, :sum -> data}),
+    ;;                   {},
+    ;;                   mapped)
     ;; average = reduced.sum / reduced.cnt
+
+ ;; explanation:
+;; “reduce” is a clojure function. In visi syntax, it's called like this 「reduce(‹x›,‹y›,‹z›)」.
+;; The ‹x› is a visi lambda, of the form 「(‹params›)=>‹body›」, and there in the ‹body› we have the “merge-with(…)”, which is also a clojure function, of this form (merge-with f & maps)
+ ;; the reduced.sum is to get the key “sum”'s value in collection named “reduced”
 
 ;; the above can also be written as
 
