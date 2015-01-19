@@ -31,7 +31,7 @@ returns 1000."
  x = 3; x
 becomes
  [:InlineFunc '(def x 3) 'x]
-and 
+and
  (fn [& x] (process-inner (drop-last x) (last x)))
 is applied, resulting
  (clojure.core/let [x 3] x)"
@@ -179,7 +179,7 @@ such that it becomes a valid Clojure expression."
 
   <PipeCommands> = Mapcommand | Flatmapcommand | Filtercommand |
                    Zipcommand | Dropcommand | Sortcommand |
-                   Samplecommand | Foldcommand | Productcommand |
+                   Samplecommand | Foldcommand | Reducecommand | Productcommand |
                    Groupbycommand
 
   Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
@@ -203,7 +203,10 @@ such that it becomes a valid Clojure expression."
 
   Samplecommand = (<'sample'>) SPACES (IDENTIFIER | ConstExpr | ParenExpr)
 
-  Foldcommand = (<'fold'> | <'reduce'>) SPACES
+  Reducecommand = (<'reduce'>) SPACES
+                (IDENTIFIER | FunctionExpr)
+
+  Foldcommand = (<'fold'>) SPACES
                 (((IDENTIFIER | ConstExpr | ParenExpr | MapExpr | VectorExpr)
                    SPACES <'->'> SPACES)? (IDENTIFIER | FunctionExpr))
 
@@ -248,11 +251,15 @@ such that it becomes a valid Clojure expression."
 
   FieldExpr = SPACES? IDENTIFIER (SPACES? <'.'> IDENTIFIER)+ SPACES?;
 
-  <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
+  <FunctionExpr> = HashFunctionExpr / HashFunctionExpr2 / HashFunctionExpr3 / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
 
   PartialFunction = SPACES? <'|'> SPACES FuncCall
 
   HashFunctionExpr = SPACES? <'#'> SPACES (DotFuncExpr / EXPRESSION2)
+
+  HashFunctionExpr2 = SPACES? <'#2'> SPACES (DotFuncExpr / EXPRESSION2)
+
+  HashFunctionExpr3 = SPACES? <'#3'> SPACES (DotFuncExpr / EXPRESSION2)
 
   DotFuncExpr = SPACES? <'.'> IDENTIFIER
 
@@ -355,9 +362,14 @@ such that it becomes a valid Clojure expression."
 
    :Foldcommand (fn
                   ([x]
-                     (fn [inside] `(~'visi.core.runtime/v-reduce ~inside ~x)))
+                     (fn [inside] `(~'visi.core.runtime/v-fold ~inside {} ~x)))
                   ([x y]
                      (fn [inside] `(~'visi.core.runtime/v-fold ~inside ~x ~y))))
+
+   :Reducecommand (fn
+                  ([x]
+                   (fn [inside] `(~'visi.core.runtime/v- ~inside ~x))))
+
 
    :Flatmapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-flat-map ~inside ~x )))
 
@@ -389,7 +401,9 @@ such that it becomes a valid Clojure expression."
    :ConstExpr identity
    :ParenExpr identity
    :FuncCall (fn [func & params] `(~func ~@params))
-   :VectorExpr (fn [& x] `[~@x])
+
+   ;; :VectorExpr (fn [& x] `(-> (list ~@x) vec)) ;; better to have a vector literal, but the analyzer barfs on vector lits
+   :VectorExpr (fn [& x] `[~@x]) ;; better to have a vector literal, but the analyzer barfs on vector lits
 
    :SetExpr (fn [& x] `#{~@x})
 
@@ -426,6 +440,10 @@ such that it becomes a valid Clojure expression."
                         `(~'as-> ~nub ~x ~@(map (fn [y] `(~y ~x)) others))))
 
    :HashFunctionExpr (fn [x] `(~'fn [~'it] ~x))
+
+   :HashFunctionExpr2 (fn [x] `(~'fn [~'it1 ~'it2] ~x))
+
+   :HashFunctionExpr3 (fn [x] `(~'fn [~'it ~'it2 ~'it3] ~x))
 
   :PartialFunction (fn [x] (cons 'partial x))
 

@@ -247,3 +247,21 @@ reduced = data |>
 average = reduced.sum / reduced.cnt
 
 #+END_SRC
+
+Okay, so we've looked a little at Visi syntax... but let's get to
+Big Data Hello World... word count.
+
+#+BEGIN_SRC python
+
+## split into words
+split_words = |> map # re-replace(it, #/\W/, " ") ## Replace non-words with spaces
+              |> flatmap # re-seq(#/\w+/, it) ## Split by words
+
+## Count the words
+count_words = |> reduce #2 update-in(it1, [it2], incr)
+
+source words = ["some words", "some more words"]
+
+sink counted = words >> split_words >> count_words
+
+#+END_SRC

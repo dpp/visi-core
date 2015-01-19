@@ -179,9 +179,10 @@ end")
            '(do 4 7)))
 
   (t/is (= (vp/parse-for-tests "begin
-x = 4;
-  end")
-           '(do (def x 4)))))
+    x = 4
+    x + 1
+end")
+           '(do (clojure.core/let [x 4] (+ x 1))))))
 
  (t/testing
   "Test LineComment."
@@ -240,9 +241,8 @@ x = 4;
 
    (t/is (=
           (vp/parse-for-tests "f(x) = x + 1; f(3)")
-          (vp/parse-for-tests "f(x) = x + 1;f(3)") ;missing a space after semicolon cause error
-          (vp/parse-for-tests "f(x) = x + 1;
-f(3)") ; line return also cause error
+          (vp/parse-for-tests "f(x) = x + 1
+  f(3)") ; line return also cause error
           '(clojure.core/let [f (clojure.core/fn [x] (+ x 1))] (f 3)))) ;
   ;
    ))
@@ -635,7 +635,7 @@ f(3)") ; line return also cause error
          (vp/parse-for-tests "if( 3, 4, 5)")
          (vp/parse-for-tests "if 3 then 4 else 5")
          (vp/parse-for-tests "if 3
-then 4 else 5") ; FIXME
+ then 4 else 5")
          (vp/parse-for-tests "if 3 then
  4 else 5")
          (vp/parse-for-tests "(3 ? 4 : 5)")

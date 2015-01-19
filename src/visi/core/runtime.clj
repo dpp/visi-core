@@ -627,3 +627,18 @@
 (defmethod vu/running-job :default
   []
   (spark-job?))
+
+(defn incr
+  "Increment a number or return 1 if it's not a Number"
+  [x]
+  (if (instance? Number x) (inc x) 1))
+
+(defn decr
+  "Decrement a number or return -1 if it's not a Number"
+  [x]
+  (if (instance? Number x) (dec x) -1))
+
+(defn re-replace
+  "a proxy to clojure.string/replace"
+  [string regex replacement]
+  (clojure.string/replace string regex replacement))
