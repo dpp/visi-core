@@ -403,23 +403,35 @@ f(3)") ; line return also cause error
   ;; <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
 
   (t/testing
-   "Test HashFunctionExpr" ;todo
-   ;; 「# ‹DotFuncExpr›」
-   ;; 「# ‹EXPRESSION2›」
+   "Test HashFunctionExpr"
 
-   ;; (get-parsetree "# .codePointAt")
-   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:HashFunctionExpr [:DotFuncExpr [:IDENTIFIER "codePointAt"]]]]]]
+   (t/is (= (vp/parse-and-eval-for-tests "100 >> # Math/log10(it)") '2.0))
 
-   ;; (get-transformed-result "# .codePointAt")
-   ;; (fn [it] (fn [z__29__auto__] (.codePointAt z__29__auto__)))
+   (t/is (= (vp/parse-and-eval-for-tests "2 >> # Math/pow(it, 3)") '8.0))
 
-   ;; seems: 「# ‹java method name›」 returns function that returns a fixed function involving the ‹java method name›
+   (t/is (= (vp/parse-and-eval-for-tests "\"a\" >> # .codePointAt(it,0)") '97))
   ;
    )
 
-  (t/testing "Test PartialFunction" ;todo
-             ;; Partial1 ;; Partial2 ;; Partial3
-             )
+  (t/testing
+   "Test PartialFunction"
+   ;; 「| ‹FuncCall›」
+
+   ;; (get-transformed-result "| f(3,4)")
+   ;; (partial f 3 4)
+
+   ;; (get-parsetree "subs(\"abcd\", 1 , 3)")
+   ;; (get-transformed-result "subs(\"abcd\", 1 , 3)")
+   ;; (get-evaled-result "subs(\"abcd\", 1 , 3)") ; bc
+
+   ;; (get-transformed-result "| subs(\"abcd\")")
+   ;; (partial subs "abcd")
+
+   (t/is (=
+          (vp/parse-and-eval-for-tests "1 >> | subs(\"abcd\")")
+          '"bcd"))
+  ;
+   )
 
   (t/testing
    "Test FunctionExpr1"
