@@ -239,46 +239,47 @@ x = 4;
           '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4))))
 
    (t/is (=
-          (vp/parse-for-tests "f(x, y) = x + y;f(3,4)")
-          '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4)))) ; missing a space after semicolon cause error
-
+          (vp/parse-for-tests "f(x) = x + 1; f(3)")
+          (vp/parse-for-tests "f(x) = x + 1;f(3)") ;missing a space after semicolon cause error
+          (vp/parse-for-tests "f(x) = x + 1;
+f(3)") ; line return also cause error
+          '(clojure.core/let [f (clojure.core/fn [x] (+ x 1))] (f 3)))) ;
+  ;
    ))
 
  (t/testing
-  "Test Source syntax" ; todo
+  "Test Source syntax"
 
   (t/is (=
-         (vp/parse-for-tests "source x52548")
-         '(visi.core.runtime/source x52548)))
+         (vp/parse-for-tests "source x")
+         '(visi.core.runtime/source x)))
 
   (t/is (=
          (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
          '(visi.core.runtime/source xyz "https://example.com/x.txt")))
 
   (t/is (=
-         (vp/pre-process-line "source 9")
-         "source 9")) ; todo. needs error reporting
-
-  (t/is (=
          (vp/parse-for-tests "source x49519 = 7")
          '(visi.core.runtime/source x49519 7))))
 
  (t/testing
-  "Test SINK syntax" ; todo
-
+  "Test SINK syntax"
   (t/is (=
-         (vp/pre-process-line "sink x25599 = y52942")
-         "(def x25599 (do (visi.core.runtime/do-sink (quote x25599) y52942) y52942))"))
-  (t/is (=
-         (vp/pre-process-line "sink: x60473 = y90940")
-         "(def x60473 (do (visi.core.runtime/do-sink (quote x60473) y90940) y90940))")))
+         (vp/parse-for-tests "sink xx = 3")
+         (vp/parse-for-tests "sink: xx = 3")
+         '(def xx (do (visi.core.runtime/do-sink (quote xx) 3) 3)))))
 
  (t/testing
   "Test VectorExpr"
+  (t/is (=
+         (vp/parse-and-eval-for-tests "[3,4]")
+         (vp/parse-and-eval-for-tests "[3 ,4]")
+         (vp/parse-and-eval-for-tests "[3, 4]")
+         (vp/parse-and-eval-for-tests "[3,4,]")
+         (vp/parse-and-eval-for-tests "[3, 2+2]")
+         '[3 4]))
 
-  (t/is (= (vp/parse-for-tests "x = [3,4]") '(def x [3 4])))
-
-  (t/is (= (vp/parse-for-tests "x = []") '(def x []))))
+  (t/is (= (vp/parse-and-eval-for-tests "[]") '[])))
 
  (t/testing
   "Test map data type, the MapExpr"
@@ -370,19 +371,51 @@ x = 4;
           {:x 3, :a 7, :b 2, :c 9}))))
 
  (t/testing
-  "Test set data type SetExpr" ; todo
+  "Test set data type SetExpr"
 
   (t/is (= (vp/parse-for-tests "#{}") '#{}))
 
-  (t/is (= (vp/parse-for-tests "#{x, y}") '#{x y})))
+  (t/is (=
+         (vp/parse-for-tests "#{x,3,y}")
+         (vp/parse-for-tests "#{x ,3,y}")
+         (vp/parse-for-tests "#{x, 3,y}")
+         (vp/parse-for-tests "#{x,3,y,}")
+         (vp/parse-for-tests "#{x,3,y ,}")
+         (vp/parse-for-tests "#{x,3,y, }")
+         '#{x 3 y}))
+
+  (t/is (=
+         (vp/parse-for-tests "#{x,3,y}")
+         (vp/parse-for-tests "#{x ,3,y}")
+         (vp/parse-for-tests "#{x, 3,y}")
+         (vp/parse-for-tests "#{x,3,y,}")
+         (vp/parse-for-tests "#{x,3,y ,}")
+         (vp/parse-for-tests "#{x,3,y, }")
+         '#{x 3 y}))
+
+  (t/is (= (vp/parse-and-eval-for-tests "#{4, 3, 7}") '#{7 3 4}))
+  ;
+  )
 
  (t/testing
   "Test FunctionExpr"
 
   ;; <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
 
-  (t/testing "Test HashFunctionExpr" ;todo
-             )
+  (t/testing
+   "Test HashFunctionExpr" ;todo
+   ;; 「# ‹DotFuncExpr›」
+   ;; 「# ‹EXPRESSION2›」
+
+   ;; (get-parsetree "# .codePointAt")
+   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:HashFunctionExpr [:DotFuncExpr [:IDENTIFIER "codePointAt"]]]]]]
+
+   ;; (get-transformed-result "# .codePointAt")
+   ;; (fn [it] (fn [z__29__auto__] (.codePointAt z__29__auto__)))
+
+   ;; seems: 「# ‹java method name›」 returns function that returns a fixed function involving the ‹java method name›
+  ;
+   )
 
   (t/testing "Test PartialFunction" ;todo
              ;; Partial1 ;; Partial2 ;; Partial3
@@ -394,7 +427,7 @@ x = 4;
    ;; ‹x› => ‹expr›
    ;; (‹x1›, ‹x2›, …) => ‹expr›
 
-   (t/is (= (vp/parse-for-tests "f => 4") '(fn [f] 4)))
+   (t/is (= (vp/parse-for-tests "x => 4") '(fn [x] 4)))
    (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn [x y] 4)))
 
    (t/is (= (vp/parse-for-tests "(x,y,z) => x + 1")
@@ -437,7 +470,22 @@ x = 4;
   ;; PipeFunctionExpression = |> PipeCommands
 
   (t/testing
-   "Test Pipe2Expression" ; >> todo
+   "Test Pipe2Expression"
+   ;; 「‹expr› >> ‹FunctionExpr›」
+   ;; can be chained.
+
+   ;; (get-parsetree "3 >> (x) => x + 1")
+   ;; (get-transformed-result "3 >> (x) => x + 1")
+   ;; (get-evaled-result "3 >> (x) => x + 1")
+
+   (t/is (=
+          (vp/parse-and-eval-for-tests "3 >> (x) => x + 1")
+          '4))
+
+   (t/is (=
+          (vp/parse-and-eval-for-tests "3 >> (x) => x + 1 >> (x) => x + 2")
+          '6))
+   ;;
    )
 
   (t/testing
@@ -460,70 +508,106 @@ x = 4;
    ;; has the form 「|> ‹pipecommands›」. e.g. 「|> map (+ 1)」 it creates a function of 1 arg, this 「‹pipecommands›(arg)」
 
    (t/is (= (vp/parse-and-eval-for-tests "apply(|> map (+ 1), [[3,4,5]])")
-            '(4 5 6)))
-   ;;
-
-   )
+            '(4 5 6))))
 
   (t/testing
-   "Test Mapcommand"
-   ;; map command is one of the visi pipe commands. By itself, is not a valid syntax. Must be used as part of PipeCommands
+   "Test PipeCommands"
+   ;; all pipe commands's syntax must be part of PipeExpression or PipeFunctionExpression
 
-   ;; sample syntax
-   (t/is (= (vp/parse-and-eval-for-tests
-             "x = [1, 2, 3]; y = 1; x |> map (+ y)")
-            '(2 3 4)))
+   (t/testing
+    "Test Mapcommand"
+    (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; x |> map (+ y)")
+             '(2 3 4)))
 
-   (t/is (= (vp/parse-and-eval-for-tests
-             "x = [1, 2, 3]; y = 1; x |> xform (+ y)")
-            '(2 3 4))))
+    (t/is (= (vp/parse-and-eval-for-tests
+              "x = [1, 2, 3]; y = 1; x |> xform (+ y)")
+             '(2 3 4))))
 
-  (t/testing
-   "Test Sortcommand"
+   (t/testing
+    "Test Sortcommand"
 
-   ;; sort command has the form
-   ;; 「sort ‹x›」
-   ;; 「sort ‹x›,ascending 」 (note, no space after comma) FIXME?
-   ;; 「sort ‹x›,declaration 」
-   ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
-   ;; sort command cannot be by itself. it's part of pipecommands, and ultimately, part of PipeExpression and PipeFunctionExpression
+    ;; sort command has the form
+    ;; 「sort ‹x›」
+    ;; 「sort ‹x›,ascending 」 (note, no space after comma) FIXME?
+    ;; 「sort ‹x›,declaration 」
+    ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
+    ;; sort command is part of pipecommands
 
-   ;; (get-parsetree "x |> sort y")
-   ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
+    ;; (get-parsetree "x |> sort y")
+    ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
 
-   ;; (get-transformed-result "x |> sort y")
-   ;; (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ y true))
+    ;; (get-transformed-result "x |> sort y")
+    ;; (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ y true))
 
-   ;; (get-transformed-result "x |> sort (x,y) => x > y")
-   ;; (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [x y] x) true)) y)
+    ;; (get-transformed-result "x |> sort (x,y) => x > y")
+    ;; (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [x y] x) true)) y)
 
-   ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
-   ;; (clojure.core/let [x [8 3 4]] (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [aa bb] aa) true)) bb))
+    ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
+    ;; (clojure.core/let [x [8 3 4]] (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [aa bb] aa) true)) bb))
 
-   ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb") ; java exception
+    ;; (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb") ; java exception
 
   ; todo. figure out the semantics of sort
 
-   )
+    )
 
-  (t/testing "Test Foldcommand" ; todo
-             )
-  
-  (t/testing "Test Flatmapcommand" ; todo
-             )
+   (t/testing
+    "Test Foldcommand" ; todo
 
-  (t/testing "Test Filtercommand" ; todo
-             )
+    ;; 「reduce ‹IDENTIFIER›」
+    ;; 「reduce ‹FunctionExpr›」
 
-  (t/testing "Test Groupbycommand" ; todo
-             )
-  ;
-  )
+    ;; 「reduce ‹vector› -> ‹FunctionExpr›」
+    ;; 「reduce ‹map› -> ‹FunctionExpr›」
+    ;; 「reduce ‹ParenExpr› -> ‹FunctionExpr›」
+    ;; 「reduce ‹ConstExpr› -> ‹FunctionExpr›」
+    ;; “reduce” can also be written as “fold”
+
+    ;; (get-parsetree "|> reduce x")
+    ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Foldcommand [:IDENTIFIER "x"]]]]]
+
+    ;; (get-parsetree "|> reduce [4, 3, 2] -> (x,y) => 4 ")
+
+    )
+
+   (t/testing
+    "Test Filtercommand" ;todo
+    ;; 「filter ‹x›」
+
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> filter :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> filter :b")
+
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> filter :b") ; not implemented? todo.
+
+    )
+
+   (t/testing
+    "Test Groupbycommand" ; todo
+    ;; 「group ‹x›」
+    ;; 「group by ‹x›」
+
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> group :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> group :b")
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> group :b") ; todo
+
+    )
+
+   (t/testing
+    "Test Flatmapcommand" ; todo
+    ;; 「flatmap ‹x›」
+    ;;  name alias: xform-cat, mapcat, flatmap
+
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> flatmap :b") ; todo
+
+    )
+   ;;
+   ))
 
  (t/testing
   "Test IfElseExpr"
-  ;; :IfElseExpr (fn [test a b] `(~'if ~test ~a ~b))
-
   ;; IfElseExpr has 3 forms.
   ;; ①  「if( ‹test›, ‹true body› , ‹false body›) 」
   ;;  note: no space after “if”
@@ -745,7 +829,9 @@ then 4 else 5") ; FIXME
            '(2 3 4)))
 
   (t/is (= (vp/parse-and-eval-for-tests "for([y, [1, 2, 3]], x = [1, 2, 3]; x |> map (+ y))")
-           '((2 3 4) (3 4 5) (4 5 6)))))
+           '((2 3 4) (3 4 5) (4 5 6))))
+  ;
+  )
 
  ;;
  )
@@ -754,16 +840,6 @@ then 4 else 5") ; FIXME
 ;; scratch pad
 
 (comment ; visi code examples
-
-;; calc_tax(income) = income * if(income > 5000, 40%, 20%)
-
-;; ff(x) =
-;;   if x > 5000 then
-;;     40%
-;;   else
-;;     20%
-
-;; ff(x) = x * tax_rate(x)
 
   ;; find where Math/cos came from in visi
 ;; Math/cos(Math/PI / 3) ## expression
@@ -807,8 +883,7 @@ then 4 else 5") ; FIXME
 
     ;; reduced = data |>
     ;;           map # Math/log10(it) |>
-    ;;           reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
-    ;;                                                             :sum -> data})
+    ;;           reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1, :sum -> data})
 
     ;; average = reduced.sum / reduced.cnt
 
