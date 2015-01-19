@@ -27,18 +27,14 @@ returns 1000."
    "#days" (* 24 60 60 1000)})
 
 (defn- process-inner
-"「(process-inner defs core)」
-「defs」 is definition.
-「core」 second arg “” is a sequence, that's visi expression.
-Called like this:
- :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
-Used in transformation.  the :InlineFunc is like this
- x = 4
-or
- f(x)= x + 1
-
-todo: documentation incomplete.
-"
+"Used to transform visi syntax for :InlineFunc grammar rule.
+ x = 3; x
+becomes
+ [:InlineFunc '(def x 3) 'x]
+and 
+ (fn [& x] (process-inner (drop-last x) (last x)))
+is applied, resulting
+ (clojure.core/let [x 3] x)"
   [defs core]
   (if (empty? defs)
     core
@@ -286,10 +282,6 @@ such that it becomes a valid Clojure expression."
 
   Operator = Op1 | Op2 | Op3 | Op4 | Op5 | Op6 | Op7 | Op8 | Op9 | Op10;
   " )
-
-;; todo: this seems to be a problem
-;;   InlineFunc = SPACES? (ConstDef | FuncDef)+ SPACES EXPRESSION
-;; it takes one or more. It should probably just be one?
 
 (def line-parser
   "Returns a parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
