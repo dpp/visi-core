@@ -1,0 +1,177 @@
+## -*- coding: utf-8; mode: visi -*-
+
+/*
+ C style comment
+ here
+*/
+
+(ns emacsvisi-test (:require [clojure.test :as t] [visi.core.parser :as vp] [visi.core.runtime :as vr] [visi.core.util :as vu] [instaparse.core :as insta] ))
+
+(+ 3 4)
+
+1#seconds + 1.#minutes  +  1.0#hours +  1#days - 7 * 4000
+
+2 ^ 3 / 4
+
+3^2/3
+(3^2)/3
+
+3 < 2
+3 > 2
+3 <= 2
+3 >= 2
+
+x != y
+x <> y
+
+x == y
+
+"abc" & "def" ## string join
+
+x %% y  ##  merge
+
+:xkeyword
+
+"this is a string add string join here"
+
+## regex
+re-matches( #/a.+/, "abc")
+
+x = 5
+
+y = x + 5
+
+x = 3; x
+
+begin
+ 4
+end
+
+begin
+ 4;
+end
+
+begin
+ 4;
+ 7;
+end
+
+begin
+    x = 4
+    x + 1
+end
+
+f(x, y) = x + y
+
+f(x, y) = x + y; f(3,4)
+
+source xyz = "https://example.com/x.txt"
+sink xx = 3
+
+## vector
+3, 2+2
+
+## map
+{:y -> 7}
+
+Math/sin(0.5)
+
+calc_tax(income) = income * if(income > 5000, 40%, 20%)
+
+tax_rate(income) = if(income > 5000, 40%, 20%)
+
+calc_tax(income) = income * tax_rate(income)
+
+tax_rate(income) =
+  if income > 5000 then
+    40%
+  else
+    20%
+
+calc_tax(income) = income * tax_rate(income)
+
+tax_rate(income) =
+  if income > 5000 then
+    40% ## for high incomes
+  else
+    20% ## for lower incomes
+
+calc_tax(income) = income * tax_rate(income)
+
+## In Visi, there are three constructs: expressions, declarations, and housekeeping.
+
+Math/cos(Math/PI / 3) ## expression
+
+cos_third_pi = Math/cos(Math/PI / 3) ## declaration
+
+plus_one = x => x + 1
+
+plus_one(x) = x + 1
+
+test_income(income) =
+  mag = Math/log10(income) ## the magnitude of the income
+  if mag < 3 then "low"
+  else if mag < 5 then "med"
+  else "high"
+
+## Functions and Big Data
+
+##Let's look at an example of computing the average of a collection of numbers using map/reduce:
+
+data = [1000, 10, 250000, 33] ## The data set
+
+mapped = map(identity, data) ## Don't change the elements
+
+reduced = reduce((acc, data) =>
+                  merge-with((+), ## Merge the accumulator and the current value
+                   acc, ## The accumulator
+                  {:cnt -> 1, ## The data to add to the accumulator
+                   :sum -> data}),
+                  {}, ## Starting value for the acculumator
+                  mapped) ## The data to reduce
+
+average = reduced.sum / reduced.cnt
+
+##The above code applies the "identity" function to each element in the set. The identity function returns the same value it took. So, the mapping phase results in the same collection that was input.
+
+data = [1000, 10, 250000, 33] ## The data set
+
+mapped = map(# Math/log10(it), data) ## Don't change the elements
+
+reduced = reduce((acc, data) =>
+                  merge-with((+), ## Merge the accumulator and the current value
+                   acc, ## The accumulator
+                  {:cnt -> 1, ## The data to add to the accumulator
+                   :sum -> data}),
+                  {}, ## Starting value for the acculumator
+                  mapped) ## The data to reduce
+
+average = reduced.sum / reduced.cnt
+
+#+END_SRC
+
+##Map/Reduce jobs can contain many map and reduce phases. Visi makes it really simple to define the pipeline as a series of function definitions and chaining operations.
+
+##We can rewrite the above with:
+
+data = [1000, 10, 250000, 33] ## The data set
+
+reduced = data |>
+          map # Math/log10(it) |>
+          reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
+                                                            :sum -> data})
+
+average = reduced.sum / reduced.cnt
+
+##Okay, so we've looked a little at Visi syntax... but let's get to Big Data Hello World... word count.
+
+## split into words
+split_words = |> map # re-replace(it, #/\W/, " ") ## Replace non-words with spaces
+              |> flatmap # re-seq(#/\w+/, it) ## Split by words
+
+## Count the words
+count_words = |> reduce #2 update-in(it1, [it2], incr)
+
+source words = ["some words", "some more words"]
+
+sink counted = words >> split_words >> count_words
