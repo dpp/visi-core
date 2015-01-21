@@ -109,6 +109,14 @@
    (t/is (= (vp/parse-and-eval-for-tests "3+2*2") 7))
    (t/is (= (vp/parse-and-eval-for-tests "2*2+3") 7))
    (t/is (= (vp/parse-and-eval-for-tests "3+2/4") 7/2))
+
+   (t/is (= (vp/parse-and-eval-for-tests "3^2/3") 
+            (vp/parse-and-eval-for-tests "(3^2)/3")
+            '3.0))
+
+   (t/is (= (vp/parse-and-eval-for-tests "3^(2/3)") '2.080083823051904 ))
+
+
    (t/is (= (vp/parse-and-eval-for-tests "(3+2)/4") 5/4)))
 
   (t/testing
@@ -151,13 +159,14 @@
 
  (t/testing
   "Test BlockComment."
-
-  (t/is (= (vp/parse-for-tests "/* x y */") nil))
-  (t/is (= (vp/parse-for-tests "/* x\ny */") nil)) ;embedded line
-  (t/is (= (vp/parse-for-tests "/* \n\ny */") nil)) ;embedded multiple lines
-  (t/is (= (vp/parse-for-tests "/* x\n\ny /* */") nil)) ;embedded /*
-  (t/is (= (vp/parse-for-tests "/* x\n\ny */ */") nil)) ;embedded */
-  (t/is (= (vp/parse-for-tests "/* x\ny /* x\ny  */ */") nil))) ;nested block comment
+  (t/is (= (vp/parse-and-eval-for-tests "/* x y */ 3") 3))
+  (t/is (= (vp/parse-and-eval-for-tests "/* x\ny */ 3") 3)) ;embedded line
+  (t/is (= (vp/parse-and-eval-for-tests "/* \n\ny */ 3") 3)) ;embedded multiple lines
+  (t/is (= (vp/parse-and-eval-for-tests "/* x\n\ny /* */ 3") 3)) ;embedded /*
+  ;; (t/is (= (vp/parse-and-eval-for-tests "/* x\n\ny */ */ 3") 3)) ;embedded */
+  (t/is (= (vp/parse-and-eval-for-tests "/* x\ny /* x\ny  */ */ 3") 3)) ; nested block comment
+  ;
+  )
 
  (t/testing
   "Test BlockExpression."
@@ -187,16 +196,15 @@ end")
  (t/testing
   "Test LineComment."
   (t/is (=
-         (vp/parse-for-tests "##")
-         (vp/parse-for-tests "## ")
-         (vp/parse-for-tests " ##")
-         (vp/parse-for-tests "## \n")
-         nil))
-
-  (t/is (= (vp/parse-for-tests "2## 3") '2))
-  (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(+ 1 2)))
-  (t/is (= (vp/parse-for-tests " ## x = 3") nil)) ; todo. need to check parse error instead of nil
-  )
+         (vp/parse-for-tests "3##")
+         (vp/parse-for-tests "3## ")
+         (vp/parse-for-tests "3 ##")
+         (vp/parse-for-tests "3## 7")
+         (vp/parse-for-tests "3 ## x = 4")
+         (vp/parse-for-tests "3## \n")
+         '3))
+  
+  (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(+ 1 2))))
 
  (t/testing
   "Test URL"
@@ -239,6 +247,7 @@ end")
           (vp/parse-for-tests "f(x, y) = x + y; f(3,4)")
           '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4))))
 
+   ;; todo. find out the role of semicolon in visi. And indentation
    (t/is (=
           (vp/parse-for-tests "f(x) = x + 1; f(3)")
           (vp/parse-for-tests "f(x) = x + 1
@@ -924,3 +933,10 @@ end")
    ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
 
 )
+
+;; ;; A Simple macro that enable to mark your test
+;; ;; to pending
+;; (defmacro deftest-pending [name &amp; body]
+;;  (let [message (str "\n========\n" name " is pending !!\n========\n")]
+;;    `(deftest ~name
+;;          (println ~message))))
