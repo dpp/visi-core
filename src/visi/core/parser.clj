@@ -170,7 +170,7 @@ such that it becomes a valid Clojure expression."
 
   NeverMatch = #'([&][+][@][%]){100000,}';
 
-  Pipe2Expression = EXPRESSION2  (SPACES <'>>'> SPACES (FunctionExpr / EXPRESSION2))+;
+  Pipe2Expression = EXPRESSION2  (SPACES <'|>'> SPACES (FunctionExpr / EXPRESSION2))+;
 
   PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
 
@@ -216,7 +216,7 @@ such that it becomes a valid Clojure expression."
 
   GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
 
-  EXPRESSION = EXPRESSION2 / Pipe2Expression / PipeExpression / PipeFunctionExpression
+  EXPRESSION = EXPRESSION2 / PipeExpression / PipeFunctionExpression / Pipe2Expression
 
   EXPRESSION2 = BlockExpression / GetExpression /
   IfElseExpr / FuncCall / ParenExpr /  ConstExpr /

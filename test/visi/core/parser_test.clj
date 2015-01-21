@@ -405,11 +405,11 @@ end")
   (t/testing
    "Test HashFunctionExpr"
 
-   (t/is (= (vp/parse-and-eval-for-tests "100 >> # Math/log10(it)") '2.0))
+   (t/is (= (vp/parse-and-eval-for-tests "100 |> # Math/log10(it)") '2.0))
 
-   (t/is (= (vp/parse-and-eval-for-tests "2 >> # Math/pow(it, 3)") '8.0))
+   (t/is (= (vp/parse-and-eval-for-tests "2 |> # Math/pow(it, 3)") '8.0))
 
-   (t/is (= (vp/parse-and-eval-for-tests "\"a\" >> # .codePointAt(it,0)") '97))
+   (t/is (= (vp/parse-and-eval-for-tests "\"a\" |> # .codePointAt(it,0)") '97))
   ;
    )
 
@@ -428,7 +428,7 @@ end")
    ;; (partial subs "abcd")
 
    (t/is (=
-          (vp/parse-and-eval-for-tests "1 >> | subs(\"abcd\")")
+          (vp/parse-and-eval-for-tests "1 |> | subs(\"abcd\")")
           '"bcd"))
   ;
    )
@@ -491,11 +491,11 @@ end")
    ;; (get-evaled-result "3 >> (x) => x + 1")
 
    (t/is (=
-          (vp/parse-and-eval-for-tests "3 >> (x) => x + 1")
+          (vp/parse-and-eval-for-tests "3 |> (x) => x + 1")
           '4))
 
    (t/is (=
-          (vp/parse-and-eval-for-tests "3 >> (x) => x + 1 >> (x) => x + 2")
+          (vp/parse-and-eval-for-tests "3 |> (x) => x + 1 |> (x) => x + 2")
           '6))
    ;;
    )
@@ -639,6 +639,7 @@ end")
          (vp/parse-for-tests "if 3 then
  4 else 5")
          (vp/parse-for-tests "(3 ? 4 : 5)")
+         (vp/parse-for-tests "3 ? 4 : 5")
          '(if 3 4 5)))
   ;; todo. add more test on extra space/newline variations in different places
 
