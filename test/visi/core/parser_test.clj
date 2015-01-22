@@ -23,8 +23,8 @@
   "Test number"
 
   (t/is (=
-         (vp/parse-and-eval-for-tests "3 + 4")
-         (vp/parse-and-eval-for-tests "3 + +4")
+         (vp/parse-and-eval-for-tests "3+ 4")
+         (vp/parse-and-eval-for-tests "3++4")
          (vp/parse-and-eval-for-tests "+3 + +4")
          7))
 
@@ -77,9 +77,9 @@
   "Test RegexLit"
   ;; FIXME: the visi regex syntax doesn't allow slash. This means, user cannot search any string that contains slash, possibly unless they use embedded Unicode char syntax
 
-  (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/a.+/, \"abc\")") "abc" ))
-  (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/a/, \"b\")") nil ))
-  (t/is (= (vp/parse-and-eval-for-tests "re-matches( #/.文/, \"中文\")") "中文" )))
+  (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a.+/, \"abc\")") "abc" ))
+  (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a/, \"b\")") nil ))
+  (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文" )))
 
  (t/testing
   "Test operators OprExpression"
@@ -232,7 +232,7 @@ end")
    (t/is (=
           (vp/parse-for-tests "f(x)" 'x 'f)
           (vp/parse-for-tests " f(x)" 'x 'f)
-          (vp/parse-for-tests "f (x)" 'x 'f)
+          (vp/parse-for-tests "f(x)" 'x 'f)
           (vp/parse-for-tests "f( x)" 'x 'f)
           (vp/parse-for-tests "f(x )" 'x 'f)
           '(f x)))
@@ -373,7 +373,7 @@ end")
    ;; test chained merge
    (t/is (=
           (vp/parse-for-tests "{\"a\" -> 7, \"b\" -> 8} %% \"x\" -> 3 %% \"y\" -> 3")
-          '(merge (merge {"a" 7, "b" 8} ["x" 3]) ["y" 3])))
+          '(merge {"a" 7, "b" 8} ["x" 3] ["y" 3])))
 
    ;; test merge of 2 maps
    (t/is (=
@@ -427,11 +427,11 @@ end")
   (t/testing
    "Test HashFunctionExpr"
 
-   (t/is (= (vp/parse-and-eval-for-tests "100 |> # Math/log10(it)") '2.0))
+   (t/is (= (vp/parse-and-eval-for-tests "100 |> # `Math/log10(it)") '2.0))
 
-   (t/is (= (vp/parse-and-eval-for-tests "2 |> # Math/pow(it, 3)") '8.0))
+   (t/is (= (vp/parse-and-eval-for-tests "2 |> # `Math/pow(it, 3)") '8.0))
 
-   (t/is (= (vp/parse-and-eval-for-tests "\"a\" |> # .codePointAt(it,0)") '97))
+   (t/is (= (vp/parse-and-eval-for-tests "\"a\" |> # $.codePointAt(it,0)") '97))
   ;
    )
 
@@ -489,10 +489,10 @@ end")
      (vp/parse-for-tests ".x")
      '(fn* ([it] (if (clojure.core/map? it) (clojure.lang.RT/get it :x) (.x it))))))
 
-   (t/is (= (vp/parse-for-tests ".dogmeat(4, 5)") '(.dogmeat 4 5)))
+   (t/is (= (vp/parse-for-tests "$.dogmeat(4, 5)") '(.dogmeat 4 5)))
    (t/is (= (vp/parse-for-tests "dogmeat(4, 5)") '(.dogmeat 4 5)))
 
-   (t/is (= (vp/parse-and-eval-for-tests ".codePointAt (\"a\", 0)") '97 ))))
+   (t/is (= (vp/parse-and-eval-for-tests "$.codePointAt(\"a\", 0)") '97 ))))
 
  (t/testing
   "Test pipe commands and expressions"
@@ -526,7 +526,7 @@ end")
 
    ;; (vp/parse-and-eval-for-tests "[1, 2, 3] |> map (+ 2)") ; parse error. This should work?
 
-   (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map (x) => .toLowerCase(x)" )
+   (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map (x) => $.toLowerCase(x)" )
             '("cd" "ab")))
 
    (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map .toLowerCase" )
@@ -824,11 +824,11 @@ end")
 
   ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
 
-  (t/is (= (vp/parse-for-tests "x / y", 'x 'y)
+  (t/is (= (vp/parse-for-tests "x/y", 'x 'y)
            '(clojure.lang.Numbers/divide x y)
            ))
 
-  (t/is (= (vp/parse-for-tests "x.y /b" 'x 'b)
+  (t/is (= (vp/parse-for-tests "x.y/b" 'x 'b)
            '(clojure.lang.Numbers/divide
              (let* [it x]
                    (if (clojure.core/map? it)
@@ -837,20 +837,20 @@ end")
              b)
            ))
 
-  (t/is (= (vp/parse-for-tests "x / y / z" 'x 'y 'z)
-           '(clojure.lang.Numbers/divide x (clojure.lang.Numbers/divide  y z)))) ; this becomes division
+  (t/is (= (vp/parse-for-tests "x/y/z" 'x 'y 'z)
+           '(clojure.lang.Numbers/divide x (clojure.lang.Numbers/divide y z)))) ; this becomes division
 
-  (t/is (= (vp/parse-for-tests "x / y / z / a" 'x 'y 'z 'a)
+  (t/is (= (vp/parse-for-tests "x / y / z/a" 'x 'y 'z 'a)
            '(clojure.lang.Numbers/divide
              x
              (clojure.lang.Numbers/divide
               y
               (clojure.lang.Numbers/divide z a))))) ; nested division
 
-  (t/is (= (vp/parse-for-tests "x / y(m)" 'x 'y 'm)
+  (t/is (= (vp/parse-for-tests "x/y(m)" 'x 'y 'm)
            '(clojure.lang.Numbers/divide x (y m))))
 
-  (t/is (= (vp/parse-and-eval-for-tests "clojure.core/list(3,4,5)")
+  (t/is (= (vp/parse-and-eval-for-tests "`clojure.core/list(3,4,5)")
            '(3 4 5))))
 
  (t/testing

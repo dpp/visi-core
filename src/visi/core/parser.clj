@@ -103,7 +103,7 @@ such that it becomes a valid Clojure expression."
 
   ConstDef1 = IDENTIFIER SPACES? <'='> SPACES? EXPRESSION SPACES? LineEnd;
 
-  FuncDef = IDENTIFIER SPACES? <'('> SPACES? (IDENTIFIER SPACES? <','> SPACES?)*
+  FuncDef = IDENTIFIER <'('> SPACES? (IDENTIFIER SPACES? <','> SPACES?)*
             IDENTIFIER SPACES? <','>? SPACES? <')'> SPACES?
             <'='> EXPRESSION SPACES? LineEnd;
 
@@ -124,32 +124,32 @@ such that it becomes a valid Clojure expression."
 
   <AnyChar> = #'.' | '\n';
 
-  IDENTIFIER = #'[a-zA-Z][a-zA-Z0-9\\-_\\?]*';
+  IDENTIFIER = #'(?:\\$.)?[a-zA-Z](?:[a-zA-Z0-9_\\?]|\\$-)*';
 
-  ClojureSymbol = #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
-  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*';
+  ClojureSymbol = <'`'> #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
+  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*' ;
 
   BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
-  Op10Exp =(Op9Exp SPACES Op10 SPACES? Op9Exp) / Op9Exp;
+  Op10Exp =(Op9Exp  Op10 Op10Exp) / Op9Exp;
 
-  Op9Exp = (Op8Exp SPACES Op9 SPACES? Op8Exp) / Op8Exp;
+  Op9Exp = (Op8Exp  Op9  Op10Exp) / Op8Exp;
 
-  Op8Exp = (Op7Exp  SPACES Op8 SPACES? Op7Exp) / Op7Exp;
+  Op8Exp = (Op7Exp  Op8  Op10Exp) / Op7Exp;
 
-  Op7Exp = (Op6Exp SPACES Op7 SPACES? Op6Exp) / Op6Exp;
+  Op7Exp = (Op6Exp  Op7  Op10Exp) / Op6Exp;
 
-  Op6Exp = (Op5Exp  SPACES Op6 SPACES? Op5Exp) / Op5Exp;
+  Op6Exp = (Op5Exp   Op6  Op10Exp) / Op5Exp;
 
-  Op5Exp = (Op4Exp  SPACES Op5 SPACES? Op4Exp) / Op4Exp;
+  Op5Exp = (Op4Exp   Op5 Op10Exp) / Op4Exp;
 
-  Op4Exp = (Op3Exp  SPACES Op4 SPACES? Op3Exp) / Op3Exp;
+  Op4Exp = (Op3Exp   Op4  Op10Exp) / Op3Exp;
 
-  Op3Exp = (Op2Exp SPACES Op3 SPACES? Op2Exp) / Op2Exp;
+  Op3Exp = (Op2Exp Op3  Op10Exp) / Op2Exp;
 
-  Op2Exp = (Op1Exp SPACES Op2 SPACES? Op1Exp) / Op1Exp;
+  Op2Exp = (Op1Exp  Op2  Op10Exp) / Op1Exp;
 
-  Op1Exp = (EXPRESSION SPACES Op1 SPACES? EXPRESSION) / EXPRESSION;
+  Op1Exp = (EXPRESSION3  Op1  EXPRESSION) / EXPRESSION3;
 
   Op10 = NeverMatch;
 
@@ -224,20 +224,25 @@ such that it becomes a valid Clojure expression."
   EXPRESSION2 = BlockExpression / GetExpression /
   IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
   FieldExpr / FunctionExpr / MapExpr / VectorExpr / SetExpr /
-  (SPACES? (IDENTIFIER | ClojureSymbol) SPACES?) /
-  InlineFunc / MergeExpr / OprExpression
+  InlineFunc / ((IDENTIFIER | ClojureSymbol)) / MergeExpr / (OprExpression)
 
-  MergeExpr = EXPRESSION (SPACES <'%%'> SPACES Pair)+;
+  EXPRESSION3 = SPACES? (BlockExpression / GetExpression /
+  IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
+  FieldExpr / FunctionExpr / MapExpr / VectorExpr / SetExpr /
+  InlineFunc / ((IDENTIFIER | ClojureSymbol)) / MergeExpr) SPACES?
 
-  FuncCall = SPACES? (IDENTIFIER | ClojureSymbol) SPACES?
+
+  MergeExpr = EXPRESSION (SPACES? <'%%'> SPACES? Pair)+;
+
+  FuncCall = SPACES? (IDENTIFIER | ClojureSymbol)
              <'('> (EXPRESSION <','>)*
                    (EXPRESSION <','>?)? SPACES? <')'> SPACES?;
 
   Partial1 = (SPACES? <'('> SPACES? Operator SPACES? <')'> SPACES?)
 
-  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES Operator SPACES? <')'> SPACES?)
+  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES? Operator SPACES? <')'> SPACES?)
 
-  Partial3 = (SPACES? <'('> SPACES? Operator SPACES EXPRESSION SPACES? <')'> SPACES?)
+  Partial3 = (SPACES? <'('> SPACES? Operator SPACES? EXPRESSION SPACES? <')'> SPACES?)
 
   ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
 
@@ -482,12 +487,13 @@ such that it becomes a valid Clojure expression."
 
    :EXPRESSION identity
    :EXPRESSION2 identity
+   :EXPRESSION3 identity
    :IDENTIFIER (fn [x] (cond
          (= "nil" x) nil
          (= "true" x) true
          (= "false" x) false
           :else
-         (symbol x)))
+         (-> x (.replace "$-" "-") (.replace "$." ".") symbol)))
    :ClojureSymbol symbol
    })
 
