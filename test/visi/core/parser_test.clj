@@ -57,7 +57,7 @@
  (t/testing
   "Test StringLit." ; todo, test all the backslash special case
 
-  (t/is (= (vp/parse-for-tests "\"3\"") '"3"))
+  (t/is (= (vp/parse-for-tests "\"3\"") "3"))
   (t/is (=
          (vp/parse-for-tests "\"3\n4\"")
          (vp/parse-for-tests "\"3
@@ -246,7 +246,7 @@ end")
 
    (t/is (=
           (vp/parse-and-eval-for-tests "f(x, y) = x + y; f(3,4)")
-          '7 ))
+          7 ))
 
    (t/is (=
           (vp/parse-for-tests "f(x, y) = x + y; f(3,4)")
@@ -339,7 +339,7 @@ end")
    ;; so, its semantics is clojure function 「get」
    ;; so, it means the FieldExpr is for getting item from visi map datatype
 
-   (t/is (= (vp/parse-for-tests "x .y" 'x 'y)
+   (t/is (= (vp/parse-for-tests "x .y" 'x)
             '(let* [it x]
                    (if (clojure.core/map? it)
                      (clojure.lang.RT/get it :y)
