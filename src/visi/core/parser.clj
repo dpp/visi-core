@@ -3,6 +3,9 @@
    [visi.core.util :as vu]
    [instaparse.core :as insta]
    [clojure.string :as cljstr]
+   [clojure.tools.analyzer.jvm :as ca]
+   [clojure.tools.analyzer.passes.jvm.emit-form :as e]
+   [clojure.tools.analyzer.passes.emit-form :as ef]
    ))
 
 (defn insert-meta
@@ -128,25 +131,25 @@ such that it becomes a valid Clojure expression."
 
   BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
-  Op10Exp =(Op9Exp SPACES? Op10 SPACES? Op9Exp) / Op9Exp;
+  Op10Exp =(Op9Exp SPACES Op10 SPACES? Op9Exp) / Op9Exp;
 
-  Op9Exp = (Op8Exp SPACES? Op9 SPACES? Op8Exp) / Op8Exp;
+  Op9Exp = (Op8Exp SPACES Op9 SPACES? Op8Exp) / Op8Exp;
 
-  Op8Exp = (Op7Exp  SPACES? Op8 SPACES? Op7Exp) / Op7Exp;
+  Op8Exp = (Op7Exp  SPACES Op8 SPACES? Op7Exp) / Op7Exp;
 
-  Op7Exp = (Op6Exp SPACES? Op7 SPACES? Op6Exp) / Op6Exp;
+  Op7Exp = (Op6Exp SPACES Op7 SPACES? Op6Exp) / Op6Exp;
 
-  Op6Exp = (Op5Exp  SPACES? Op6 SPACES? Op5Exp) / Op5Exp;
+  Op6Exp = (Op5Exp  SPACES Op6 SPACES? Op5Exp) / Op5Exp;
 
-  Op5Exp = (Op4Exp  SPACES? Op5 SPACES? Op4Exp) / Op4Exp;
+  Op5Exp = (Op4Exp  SPACES Op5 SPACES? Op4Exp) / Op4Exp;
 
-  Op4Exp = (Op3Exp  SPACES? Op4 SPACES? Op3Exp) / Op3Exp;
+  Op4Exp = (Op3Exp  SPACES Op4 SPACES? Op3Exp) / Op3Exp;
 
-  Op3Exp = (Op2Exp SPACES? Op3 SPACES? Op2Exp) / Op2Exp;
+  Op3Exp = (Op2Exp SPACES Op3 SPACES? Op2Exp) / Op2Exp;
 
-  Op2Exp = (Op1Exp SPACES? Op2 SPACES? Op1Exp) / Op1Exp;
+  Op2Exp = (Op1Exp SPACES Op2 SPACES? Op1Exp) / Op1Exp;
 
-  Op1Exp = (EXPRESSION SPACES? Op1 SPACES? EXPRESSION) / EXPRESSION;
+  Op1Exp = (EXPRESSION SPACES Op1 SPACES? EXPRESSION) / EXPRESSION;
 
   Op10 = NeverMatch;
 
@@ -232,9 +235,9 @@ such that it becomes a valid Clojure expression."
 
   Partial1 = (SPACES? <'('> SPACES? Operator SPACES? <')'> SPACES?)
 
-  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES? Operator SPACES? <')'> SPACES?)
+  Partial2 = (SPACES? <'('> SPACES? EXPRESSION SPACES Operator SPACES? <')'> SPACES?)
 
-  Partial3 = (SPACES? <'('> SPACES? Operator SPACES? EXPRESSION SPACES? <')'> SPACES?)
+  Partial3 = (SPACES? <'('> SPACES? Operator SPACES EXPRESSION SPACES? <')'> SPACES?)
 
   ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
 
@@ -249,7 +252,15 @@ such that it becomes a valid Clojure expression."
 
   RegexLit = #'#/[^/]*?/';
 
-  FieldExpr = SPACES? IDENTIFIER (SPACES? <'.'> IDENTIFIER)+ SPACES?;
+  FieldField =  (SPACES? <'.'> IDENTIFIER)
+
+  ForceField =  (SPACES? <'..'> IDENTIFIER)
+
+  MethodMethod = (SPACES? <'.'> IDENTIFIER <'('> (SPACES? EXPRESSION SPACES? <','> )* (SPACES? EXPRESSION)? SPACES? <')'>)
+
+  ForceMethod = (SPACES? <'..'> IDENTIFIER <'('> (SPACES? EXPRESSION SPACES? <','> )* (SPACES? EXPRESSION)? SPACES? <')'>)
+
+  FieldExpr = SPACES? IDENTIFIER (ForceMethod / MethodMethod / FieldField / ForceField)+ SPACES?;
 
   <FunctionExpr> = HashFunctionExpr / HashFunctionExpr2 / HashFunctionExpr3 / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
 
@@ -322,8 +333,19 @@ such that it becomes a valid Clojure expression."
 
    :URL identity
 
+   :FieldField (fn [x] `(visi.core.parser/thread-it
+                         (if (clojure.core/map? ~'it)
+                           (clojure.core/get ~'it ~(keyword x))
+                           (~(symbol (str "." x)) ~'it))))
+
+   :ForceField (fn [x] (symbol (str "." x)))
+
+   :MethodMethod (fn [x & others] `(~(symbol (str x)) ~@others))
+
+   :ForceMethod (fn [x & others] `(~(symbol (str "." x)) ~@others))
+
    :FieldExpr (fn [root & others]
-                `(~'-> ~root ~@(map (fn [x] `(~'get ~(keyword x))) others)))
+                `(~'-> ~root ~@others))
 
    :SINK (fn [name expression]
            (let [name (symbol name)
@@ -345,9 +367,10 @@ such that it becomes a valid Clojure expression."
                          expr (last all)]
                      `(~'fn [~@vars] ~expr)))
 
-   :DotFuncExpr (fn [x]
-                  (let [z `z#]
-                    `(~'fn [~z] (~(symbol (str "." x)) ~z))))
+   :DotFuncExpr (fn [x] `(~'fn [~'it]
+                          (if (clojure.core/map? ~'it)
+                            (clojure.core/get ~'it ~(keyword x))
+                            (~(symbol (str "." x)) ~'it))))
 
    :PipeExpression (fn [root & pipeline]
                      (let [x `x#]
@@ -468,6 +491,45 @@ such that it becomes a valid Clojure expression."
    :ClojureSymbol symbol
    })
 
+;; something that is maybe a class that's not found
+;; might very well be a method invocation, so we'll treat it
+;; that way
+(defmethod ef/-emit-form :maybe-method
+  [x opts]
+  (->> x :form (str ".") symbol))
+
+(defmacro thread-it
+  [a b]
+  `(let [~'it ~a] ~b))
+
+(defn fixup-method-calls
+  "Uses the JVM analyzer to look at function calls
+that are not associated with a namespace and turn them
+into method invocations. So, toString(33) becomes
+(.toString 33) rather than (toString 33)"
+  [code namespace opts]
+  (try
+    (->
+     code
+     (ca/analyze
+      (assoc
+       (ca/empty-env)
+       :locals
+       (->> opts
+            :locals
+            (map (fn [x] [x {:op :binding :name x :form x :local :let}]))
+            (into {})))
+      {:passes-opts
+       {:validate/unresolvable-symbol-handler
+        (fn [a b c]
+          (assoc c :op :maybe-method))
+        }})
+     (e/emit-form  (or (:emit opts) {:qualified-symbols true :hygienic true}) )
+     (thread-it {:failed false :res it}))
+    (catch Exception e {:failed false :res code}) ;; if we get an exception, just punt
+    )
+  )
+
 (defn post-process
 "(post-process parse-tree)
  (post-process parse-tree namespace)
@@ -479,12 +541,26 @@ else, return
  {:failed false :res transform-result}
 transform-result is Clojure form, e.g. `(def x 4)
 "
-  ([parse-tree namespace] (post-process parse-tree))
-  ([parse-tree]
-   (if (instance? instaparse.gll.Failure parse-tree)
-       {:failed true :error parse-tree}
-     {:failed false :res (insta/transform xform-rules parse-tree) }
-     )))
+([parse-tree namespace opts]
+ (if (instance? instaparse.gll.Failure parse-tree)
+   {:failed true :error parse-tree}
+   (->
+    (insta/transform xform-rules parse-tree)
+    (fixup-method-calls namespace opts))
+       )))
+
+(defn- remove-hygene
+  "Removes some of the hygenic symbols... makes for stables tests"
+  [x]
+  (cond
+    (seq? x) (map remove-hygene x)
+    (vector? x) (mapv remove-hygene x)
+    (and
+     (symbol? x)
+     (re-seq  #"__\d+__auto__$" (str x)))
+    (symbol (clojure.string/replace (str x)  #"__\d+__auto__$"  ""))
+    :else x)
+  )
 
 (defn parse-line
   "Parse 1 line of visi code.
@@ -496,14 +572,14 @@ Returns a map. If failed, returns
  {:failed true, :error parse-tree}
 else, return
  {:failed false, :res parse-result}"
-  ([the-line] (parse-line the-line nil))
-  ([the-line namespace]
-   (-> the-line .trim (str "\n") line-parser (post-process namespace))))
+  ([the-line] (parse-line the-line *ns* {}))
+  ([the-line namespace opts]
+   (-> the-line .trim (str "\n") line-parser (post-process namespace opts))))
 
 (defn parse-for-tests
   "Parse the line into an S-expression"
-  [code]
-  (-> code parse-line :res))
+  [code & locals]
+  (-> code (parse-line *ns* {:locals locals :emit {}}) :res remove-hygene))
 
 (defn parse-and-eval-for-tests
   "Parse and evaluate the expression. throws if the expression can't be parsed"

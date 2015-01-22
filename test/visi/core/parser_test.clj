@@ -28,18 +28,18 @@
          (vp/parse-and-eval-for-tests "+3 + +4")
          7))
 
-  (t/is (= (vp/parse-for-tests "3 + -4") '(+ 3 -4)))
-  (t/is (= (vp/parse-for-tests "3 + -4.") '(+ 3 -4.0)))
-  (t/is (= (vp/parse-for-tests "-3 + -4.") '(+ -3 -4.0)))
-  (t/is (= (vp/parse-for-tests "-3 - -4") '(- -3 -4))))
+  (t/is (= (vp/parse-for-tests "3 + -4") '(clojure.lang.Numbers/add 3 -4)))
+  (t/is (= (vp/parse-for-tests "3 + -4.") '(clojure.lang.Numbers/add 3 -4.0)))
+  (t/is (= (vp/parse-for-tests "-3 + -4.") '(clojure.lang.Numbers/add -3 -4.0)))
+  (t/is (= (vp/parse-for-tests "-3 - -4") '(clojure.lang.Numbers/minus -3 -4))))
 
  (t/testing
   "Test NumberQualifier"
-  (t/is (= (vp/parse-for-tests "2%") '1/50))
-  (t/is (= (vp/parse-for-tests "2.%") '0.02))
+  (t/is (= (vp/parse-for-tests "2%") 1/50))
+  (t/is (= (vp/parse-for-tests "2.%") 0.02))
   (t/is (= (vp/parse-for-tests "1#seconds") 1000))
-  (t/is (= (vp/parse-for-tests "1.#minutes") '60000.0))
-  (t/is (= (vp/parse-for-tests "1.0#hours") '3600000.0))
+  (t/is (= (vp/parse-for-tests "1.#minutes") 60000.0))
+  (t/is (= (vp/parse-for-tests "1.0#hours") 3600000.0))
   (t/is (= (vp/parse-for-tests "1#days") 86400000))
   (t/is (= (vp/parse-and-eval-for-tests "1#seconds + 1#minutes") 61000)))
 
@@ -47,8 +47,8 @@
   "Test Keyword"
   ;; keyword has the form 「:‹x›」. It is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
 
-  (t/is (= (vp/parse-for-tests ":x25707") ':x25707))
-  (t/is (= (vp/parse-for-tests ":p40689") ':p40689))
+  (t/is (= (vp/parse-for-tests ":x25707") :x25707))
+  (t/is (= (vp/parse-for-tests ":p40689") :p40689))
 
   ;; note: keywords cannot happen together, such as 「:x :y」, unlike Clojure. For example, the following are illegal syntax: 「:x :y」「x y」 「3 4」「"a" "b"」
 
@@ -88,53 +88,53 @@
    "Test arithmetic operators. + - * / ^"
 
    (t/is (=
-          (vp/parse-for-tests "3 + y")
-          (vp/parse-for-tests "3+ y")
-          (vp/parse-for-tests "3 +y")
-          '(+ 3 y)))
+          (vp/parse-for-tests "3 + y" 'y)
+          (vp/parse-for-tests "3 + y" 'y)
+          (vp/parse-for-tests "3 +y" 'y)
+          '(clojure.lang.Numbers/add 3 y)))
 
-   (t/is (= (vp/parse-for-tests "3 + y") '(+ 3 y)))
-   (t/is (= (vp/parse-for-tests "3 - 1") '(- 3 1)))
-   (t/is (= (vp/parse-for-tests "x * y") '(* x y)))
-   (t/is (= (vp/parse-for-tests "x / y") '(/ x y)))
-   (t/is (= (vp/parse-for-tests "3 ^ 2") '(Math/pow 3 2)))
+   (t/is (= (vp/parse-for-tests "3 + y" 'y) '(clojure.lang.Numbers/add 3 y)))
+   (t/is (= (vp/parse-for-tests "3 - 1") '(clojure.lang.Numbers/minus 3 1)))
+   (t/is (= (vp/parse-for-tests "x * y" 'x 'y) '(clojure.lang.Numbers/multiply x y)))
+   (t/is (= (vp/parse-for-tests "x / y" 'x 'y) '(clojure.lang.Numbers/divide x y)))
+   (t/is (= (vp/parse-for-tests "3 ^ 2") '(java.lang.Math/pow 3 2)))
 
    ;; test int/float
-   (t/is (= (vp/parse-and-eval-for-tests "3+2/4.")
-            (vp/parse-and-eval-for-tests "3+2./4")
-            (vp/parse-and-eval-for-tests "3.+2/4")
+   (t/is (= (vp/parse-and-eval-for-tests "3 +2 /4.")
+            (vp/parse-and-eval-for-tests "3 +2. /4")
+            (vp/parse-and-eval-for-tests "3. +2 /4")
             3.5))
 
    ;; test precedence. todo: need a full precedence test on all visi operators, including things like merge %% and string join operator &
-   (t/is (= (vp/parse-and-eval-for-tests "3+2*2") 7))
-   (t/is (= (vp/parse-and-eval-for-tests "2*2+3") 7))
-   (t/is (= (vp/parse-and-eval-for-tests "3+2/4") 7/2))
+   (t/is (= (vp/parse-and-eval-for-tests "3 +2 *2") 7))
+   (t/is (= (vp/parse-and-eval-for-tests "2 *2 +3") 7))
+   (t/is (= (vp/parse-and-eval-for-tests "3 +2 /4") 7/2))
 
-   (t/is (= (vp/parse-and-eval-for-tests "3^2/3") 
-            (vp/parse-and-eval-for-tests "(3^2)/3")
+   (t/is (= (vp/parse-and-eval-for-tests "3 ^2 /3")
+            (vp/parse-and-eval-for-tests "(3 ^2) /3")
             '3.0))
 
-   (t/is (= (vp/parse-and-eval-for-tests "3^(2/3)") '2.080083823051904 ))
+   (t/is (= (vp/parse-and-eval-for-tests "3 ^(2 / 3)") '2.080083823051904 ))
 
 
-   (t/is (= (vp/parse-and-eval-for-tests "(3+2)/4") 5/4)))
+   (t/is (= (vp/parse-and-eval-for-tests "(3 +2) /4") 5/4)))
 
   (t/testing
    "Test comparison operators < > <= >= != <> =="
 
-   (t/is (= (vp/parse-for-tests "3 < 2") '(< 3 2)))
-   (t/is (= (vp/parse-for-tests "3 > 2") '(> 3 2)))
-   (t/is (= (vp/parse-for-tests "3 <= 2") '(<= 3 2)))
-   (t/is (= (vp/parse-for-tests "3 >= 2") '(>= 3 2)))
+   (t/is (= (vp/parse-for-tests "3 < 2") '(clojure.lang.Numbers/lt 3 2)))
+   (t/is (= (vp/parse-for-tests "3 > 2") '(clojure.lang.Numbers/gt 3 2)))
+   (t/is (= (vp/parse-for-tests "3 <= 2") '(clojure.lang.Numbers/lte 3 2)))
+   (t/is (= (vp/parse-for-tests "3 >= 2") '(clojure.lang.Numbers/gte 3 2)))
 
    (t/is (=
-          (vp/parse-for-tests "x != y")
-          (vp/parse-for-tests "x <> y")
+          (vp/parse-for-tests "x != y" 'x 'y)
+          (vp/parse-for-tests "x <> y" 'x 'y)
           '(not= x y)))
 
    (t/is (=
-          (vp/parse-for-tests "x == y") ; visi syntax may need a negation operator/function
-          '(= x y))))
+          (vp/parse-for-tests "x == y" 'x 'y) ; visi syntax may need a negation operator/function
+          '(clojure.lang.Util/equiv x y))))
 
   (t/testing
    "Test logic operators and other operators"
@@ -142,9 +142,9 @@
           (vp/parse-for-tests "\"x\" & \"y\"") ; join string
           '(str "x" "y")))
 
-   (t/is (= (vp/parse-for-tests "x && y") '(and x y)))
-   (t/is (= (vp/parse-for-tests "x || y") '(or x y)))
-   (t/is (= (vp/parse-for-tests "x %% y") '(merge x y)))))
+   (t/is (= (vp/parse-for-tests "x && y" 'x 'y) '(let* [and x] (if and y and))))
+   (t/is (= (vp/parse-for-tests "x || y" 'x 'y) '(let* [or x] (if or or y))))
+   (t/is (= (vp/parse-for-tests "x %% y" 'x 'y) '(merge x y)))))
 
  (t/testing
   "Test ConstDef ConstDef1"
@@ -191,7 +191,7 @@ end")
     x = 4
     x + 1
 end")
-           '(do (clojure.core/let [x 4] (+ x 1))))))
+           '(do (let* [x 4] (clojure.lang.Numbers/add x 1))))))
 
  (t/testing
   "Test LineComment."
@@ -203,8 +203,8 @@ end")
          (vp/parse-for-tests "3 ## x = 4")
          (vp/parse-for-tests "3## \n")
          '3))
-  
-  (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(+ 1 2))))
+
+  (t/is (= (vp/parse-for-tests "1 + 2 ## 3 + 3") '(clojure.lang.Numbers/add 1 2))))
 
  (t/testing
   "Test URL"
@@ -217,26 +217,31 @@ end")
 
  (t/testing
   "Test FuncDef."
-  (t/is (= (vp/parse-for-tests "f(x, y) = x + y") '(defn f [x y] (+ x y))))
-  (t/is (= (vp/parse-for-tests "f(x,y) = x+y") '(defn f [x y] (+ x y))))
-  (t/is (= (vp/parse-for-tests "f(x)=3") '(defn f [x] 3)))
+  (t/is (= (vp/parse-for-tests "f(x, y) = x + y")
+           '(def f (fn* ([x y]
+                         (clojure.lang.Numbers/add x y))))))
+
+  (t/is (= (vp/parse-for-tests "f(x,y) = x +y")
+           '(def f (fn* ( [x y] (clojure.lang.Numbers/add x y))))))
+
+  (t/is (= (vp/parse-for-tests "f(x)=3") '(def  f (fn* ([x] 3)))))
 
   (t/testing
    "Test FuncCall"
    ;; FuncCall has the form 「‹f›(‹x1›,‹x2›,…)」
    (t/is (=
-          (vp/parse-for-tests "f(x)")
-          (vp/parse-for-tests " f(x)")
-          (vp/parse-for-tests "f (x)")
-          (vp/parse-for-tests "f( x)")
-          (vp/parse-for-tests "f(x )")
+          (vp/parse-for-tests "f(x)" 'x 'f)
+          (vp/parse-for-tests " f(x)" 'x 'f)
+          (vp/parse-for-tests "f (x)" 'x 'f)
+          (vp/parse-for-tests "f( x)" 'x 'f)
+          (vp/parse-for-tests "f(x )" 'x 'f)
           '(f x)))
 
    (t/is (=
-          (vp/parse-for-tests "g(x,y)")
-          (vp/parse-for-tests "g(x ,y)")
-          (vp/parse-for-tests "g(x, y)")
-          (vp/parse-for-tests "g(x,y )")
+          (vp/parse-for-tests "g(x,y)" 'x 'y 'g)
+          (vp/parse-for-tests "g(x ,y)" 'x 'y 'g)
+          (vp/parse-for-tests "g(x, y)" 'x 'y 'g)
+          (vp/parse-for-tests "g(x,y )" 'x 'y 'g)
           '(g x y)))
 
    (t/is (=
@@ -245,14 +250,14 @@ end")
 
    (t/is (=
           (vp/parse-for-tests "f(x, y) = x + y; f(3,4)")
-          '(clojure.core/let [f (clojure.core/fn [x y] (+ x y))] (f 3 4))))
+          '(let* [f (fn* ([x y] (clojure.lang.Numbers/add x y)))] (f 3 4))))
 
    ;; todo. find out the role of semicolon in visi. And indentation
    (t/is (=
           (vp/parse-for-tests "f(x) = x + 1; f(3)")
           (vp/parse-for-tests "f(x) = x + 1
   f(3)") ; line return also cause error
-          '(clojure.core/let [f (clojure.core/fn [x] (+ x 1))] (f 3)))) ;
+          '(let* [f (fn* ([x] (clojure.lang.Numbers/add x 1)))] (f 3)))) ;
   ;
    ))
 
@@ -265,11 +270,14 @@ end")
 
   (t/is (=
          (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
-         '(visi.core.runtime/source xyz "https://example.com/x.txt")))
+         '(def xyz (visi.core.runtime/build-rdd-from-url (visi.core.runtime/spark-context) "https://example.com/x.txt"))
+         ))
 
   (t/is (=
          (vp/parse-for-tests "source x49519 = 7")
-         '(visi.core.runtime/source x49519 7))))
+         '(def x49519 (visi.core.runtime/build-rdd-from-url
+                       (visi.core.runtime/spark-context) 7))
+         )))
 
  (t/testing
   "Test SINK syntax"
@@ -285,7 +293,7 @@ end")
          (vp/parse-and-eval-for-tests "[3 ,4]")
          (vp/parse-and-eval-for-tests "[3, 4]")
          (vp/parse-and-eval-for-tests "[3,4,]")
-         (vp/parse-and-eval-for-tests "[3, 2+2]")
+         (vp/parse-and-eval-for-tests "[3, 2 + 2]")
          '[3 4]))
 
   (t/is (= (vp/parse-and-eval-for-tests "[]") '[])))
@@ -331,7 +339,12 @@ end")
    ;; so, its semantics is clojure function 「get」
    ;; so, it means the FieldExpr is for getting item from visi map datatype
 
-   (t/is (= (vp/parse-for-tests "x .y") '(-> x (get :y))))
+   (t/is (= (vp/parse-for-tests "x .y" 'x 'y)
+            '(let* [it x]
+                   (if (clojure.core/map? it)
+                     (clojure.lang.RT/get it :y)
+                     (.y it)))
+            ))
 
    (t/is (=
           (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
@@ -350,7 +363,7 @@ end")
    ;; note: the right hand side needs not be a clojure list. todo, find out exactly why or what.
 
    ;; test syntactic validity
-   (t/is (= (vp/parse-for-tests "x %% y") '(merge x y)))
+   (t/is (= (vp/parse-for-tests "x %% y" 'x 'y) '(merge x y)))
 
    ;; simple merge
    (t/is (=
@@ -385,21 +398,21 @@ end")
   (t/is (= (vp/parse-for-tests "#{}") '#{}))
 
   (t/is (=
-         (vp/parse-for-tests "#{x,3,y}")
-         (vp/parse-for-tests "#{x ,3,y}")
-         (vp/parse-for-tests "#{x, 3,y}")
-         (vp/parse-for-tests "#{x,3,y,}")
-         (vp/parse-for-tests "#{x,3,y ,}")
-         (vp/parse-for-tests "#{x,3,y, }")
+         (vp/parse-for-tests "#{x,3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x ,3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x, 3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y,}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y ,}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y, }" 'x 'y)
          '#{x 3 y}))
 
   (t/is (=
-         (vp/parse-for-tests "#{x,3,y}")
-         (vp/parse-for-tests "#{x ,3,y}")
-         (vp/parse-for-tests "#{x, 3,y}")
-         (vp/parse-for-tests "#{x,3,y,}")
-         (vp/parse-for-tests "#{x,3,y ,}")
-         (vp/parse-for-tests "#{x,3,y, }")
+         (vp/parse-for-tests "#{x,3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x ,3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x, 3,y}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y,}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y ,}" 'x 'y)
+         (vp/parse-for-tests "#{x,3,y, }" 'x 'y)
          '#{x 3 y}))
 
   (t/is (= (vp/parse-and-eval-for-tests "#{4, 3, 7}") '#{7 3 4}))
@@ -448,15 +461,15 @@ end")
    ;; ‹x› => ‹expr›
    ;; (‹x1›, ‹x2›, …) => ‹expr›
 
-   (t/is (= (vp/parse-for-tests "x => 4") '(fn [x] 4)))
-   (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn [x y] 4)))
+   (t/is (= (vp/parse-for-tests "x => 4") '(fn* ([x] 4))))
+   (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn* ([x y] 4))))
 
    (t/is (= (vp/parse-for-tests "(x,y,z) => x + 1")
             (vp/parse-for-tests "(x ,y,z) => x + 1")
             (vp/parse-for-tests "(x, y,z) => x + 1")
             (vp/parse-for-tests "(x , y,z) => x + 1")
             (vp/parse-for-tests "(x , y ,z) => x + 1")
-            '(fn [x y z] (+ x 1))))
+            '(fn* ([x y z] (clojure.lang.Numbers/add x 1)))))
 
    (t/is (= (vp/parse-and-eval-for-tests "f = (x,y) => x + y; f(3,4)") 7 ))
    (t/is (= (apply (vp/parse-and-eval-for-tests "(x) => x + 1") 3 '()) 4 )) ; apply
@@ -472,15 +485,12 @@ end")
    ;; this means, if the ‹x› is a java method name, then it works.
 
    (t/is
-    (let [form (vp/parse-for-tests ".x")]
-      (comment '(fn [z__29__auto__] (.x z__29__auto__))
-               ;; todo. find a way to match form
-               )
-      (= (first form) 'fn )
-      (vector? (second form))
-      (seq? (nth (vp/parse-for-tests ".x") 2))))
+    (=
+     (vp/parse-for-tests ".x")
+     '(fn* ([it] (if (clojure.core/map? it) (clojure.lang.RT/get it :x) (.x it))))))
 
-   (t/is (= (vp/parse-for-tests ".x (4, 5)") '(.x 4 5)))
+   (t/is (= (vp/parse-for-tests ".dogmeat(4, 5)") '(.dogmeat 4 5)))
+   (t/is (= (vp/parse-for-tests "dogmeat(4, 5)") '(.dogmeat 4 5)))
 
    (t/is (= (vp/parse-and-eval-for-tests ".codePointAt (\"a\", 0)") '97 ))))
 
@@ -663,9 +673,11 @@ end")
   "Test GetExpression"
   ;; has the form 「‹x›[‹y1›]」, 「‹x›[‹y1›][‹y2›]」, 「‹x›[‹y1›][‹y2›][‹y3›]」, …. It can be used on vector data type and map data type
 
-  (t/is (= (vp/parse-for-tests "x[2]") '(-> x (get 2))))
+  (t/is (= (vp/parse-for-tests "x[2]" 'x)
+           '(clojure.lang.RT/get x 2)))
 
-  (t/is (= (vp/parse-for-tests "x[2][3]") '(-> x (get 2) (get 3))))
+  (t/is (= (vp/parse-for-tests "x[2][3]" 'x)
+           '(clojure.lang.RT/get (clojure.lang.RT/get x 2) 3)))
 
   (t/is (= (vp/parse-and-eval-for-tests "x=[3]; x[0]")
            (vp/parse-and-eval-for-tests "x=[2,[3]]; x[1][0]")
@@ -720,13 +732,13 @@ end")
   ;; (get-parsetree "(3+2)/4")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]] [:Op3 "+"] [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "2"]]]]]]]]]]]]]]]]]]]]] [:Op2 "/"] [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "4"]]]]]]]]]]]]]]]]]]
 
-  (t/is (= ((vp/parse-and-eval-for-tests "(+)") 3 4) '7))
+  (t/is (= ((vp/parse-and-eval-for-tests "(+)") 3 4) 7))
 
-  (t/is (= ((vp/parse-and-eval-for-tests "(3+)") 4) '7))
+  (t/is (= ((vp/parse-and-eval-for-tests "(3 +)") 4) 7))
 
-  (t/is (= ((vp/parse-and-eval-for-tests "(/3)") 4) '4/3 ))
+  (t/is (= ((vp/parse-and-eval-for-tests "(/ 3)") 4) 4/3 ))
 
-  (t/is (= (vp/parse-and-eval-for-tests "(3)") '3)) ;
+  (t/is (= (vp/parse-and-eval-for-tests "(3)") 3)) ;
   )
 
  (t/testing
@@ -799,10 +811,10 @@ end")
   ;;           [:Number "4"]]]]]]]]]]]
 
   (t/is (= (vp/parse-for-tests "x = 3; x")
-           '(clojure.core/let [x 3] x)))
+           '(let* [x 3] x)))
 
   (t/is (= (vp/parse-for-tests "f(x)=3; x")
-           '(clojure.core/let [f (clojure.core/fn [x] 3)] x)))
+           '(let* [f (fn* ([x] 3))] x)))
 
   (t/is (= (vp/parse-and-eval-for-tests "f(x)=3; f(4)")
            3)))
@@ -812,22 +824,31 @@ end")
 
   ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
 
-  (t/is (= (vp/parse-for-tests "x/y")
-           'x/y
+  (t/is (= (vp/parse-for-tests "x / y", 'x 'y)
+           '(clojure.lang.Numbers/divide x y)
            ))
 
-  (t/is (= (vp/parse-for-tests "x.y/b")
-           'x.y/b
+  (t/is (= (vp/parse-for-tests "x.y /b" 'x 'b)
+           '(clojure.lang.Numbers/divide
+             (let* [it x]
+                   (if (clojure.core/map? it)
+                     (clojure.lang.RT/get it :y)
+                     (.y it)))
+             b)
            ))
 
-  (t/is (= (vp/parse-for-tests "x/y/z")
-           '(/ x y/z))) ; this becomes division
+  (t/is (= (vp/parse-for-tests "x / y / z" 'x 'y 'z)
+           '(clojure.lang.Numbers/divide x (clojure.lang.Numbers/divide  y z)))) ; this becomes division
 
-  (t/is (= (vp/parse-for-tests "x/y/z/a")
-           '(/ x (/ y/z a)))) ; nested division
+  (t/is (= (vp/parse-for-tests "x / y / z / a" 'x 'y 'z 'a)
+           '(clojure.lang.Numbers/divide
+             x
+             (clojure.lang.Numbers/divide
+              y
+              (clojure.lang.Numbers/divide z a))))) ; nested division
 
-  (t/is (= (vp/parse-for-tests "x/y(m)")
-           '(x/y m)))
+  (t/is (= (vp/parse-for-tests "x / y(m)" 'x 'y 'm)
+           '(clojure.lang.Numbers/divide x (y m))))
 
   (t/is (= (vp/parse-and-eval-for-tests "clojure.core/list(3,4,5)")
            '(3 4 5))))
@@ -836,7 +857,9 @@ end")
   "Test parser, misc"
 
   (t/is (= (vp/parse-for-tests "x=[3]; 2")
-           '(clojure.core/let [x [3]] 2)))
+           '(let* [x [3]] 2)
+           ;; '(clojure.core/let [x [3]] 2)
+           ))
 
   (t/is (= (vp/parse-and-eval-for-tests
             "x = [1, 2, 3]; map( (+ 1), x)")
