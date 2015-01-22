@@ -11,10 +11,13 @@
 (defn get-transformed-result [code] (insta/transform vp/xform-rules (insta/parse vparser code)))
 (defn get-evaled-result [code] (eval (insta/transform vp/xform-rules (insta/parse vparser code))))
 
+(defmacro deftest-pending [name &amp; body]
+ (let [message (str "\n========\n" name " is pending !!\n========\n")]
+   `(deftest ~name
+         (println ~message))))
+
 (t/deftest
  test-parser
-
- ;; todo. warning: garbage syntax fed to vp/parse-for-tests returns nil. Need to find a way that also check parser error, either write a function using instaparse, or retrieve from vp/parse-line. This needs to be applied to all tests.
  (t/testing
   "Test test garbage syntax"
   (t/is (= (vp/parse-for-tests "1 + 2 honuh ++ ** 7 *2 ;8") nil)))
@@ -934,6 +937,8 @@ end")
 
 )
 
+;; todo. warning: garbage syntax fed to vp/parse-for-tests returns nil. Need to find a way that also check parser error, either write a function using instaparse, or retrieve from vp/parse-line. This needs to be applied to all tests.
+
 (comment ;; random old sample visi code
 
    ;; (def lower
@@ -957,9 +962,5 @@ end")
 
 )
 
-;; ;; A Simple macro that enable to mark your test
-;; ;; to pending
-;; (defmacro deftest-pending [name &amp; body]
-;;  (let [message (str "\n========\n" name " is pending !!\n========\n")]
-;;    `(deftest ~name
-;;          (println ~message))))
+
+
