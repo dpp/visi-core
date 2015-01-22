@@ -11,7 +11,7 @@
 (defn get-transformed-result [code] (insta/transform vp/xform-rules (insta/parse vparser code)))
 (defn get-evaled-result [code] (eval (insta/transform vp/xform-rules (insta/parse vparser code))))
 
-(defmacro deftest-pending [name &amp; body]
+(defmacro deftest-pending [name & body]
  (let [message (str "\n========\n" name " is pending !!\n========\n")]
    `(deftest ~name
          (println ~message))))
@@ -961,6 +961,3 @@ end")
    ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
 
 )
-
-
-
