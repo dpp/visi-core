@@ -8,6 +8,10 @@
    [clojure.tools.analyzer.passes.emit-form :as ef]
    ))
 
+(defmacro thread-it
+  [a b]
+  `(let [~'it ~a] ~b))
+
 (defn insert-meta
 "Takes 1 argument: res. res is a Clojure form, e.g. `(def x 4).
 Returns a new res, but with metadata attached to the second element of res.
@@ -93,7 +97,17 @@ such that it becomes a valid Clojure expression."
   "
   Lines = (Line (<'\n'>)*)*;
 
-  Line = (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+  Line = Namespace / (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+
+  NamespaceName = #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)'
+
+  Namespace = <'$namespace('> SPACES? NamespaceName (SPACES? <','> (Requires | Import | Load))* SPACES? <')'> SPACES? LineEnd;
+
+  Requires = SPACES? <'require('> SPACES? <')'>
+
+  Import = SPACES? <'import('> SPACES? <')'>
+
+  Load = SPACES? <'load('> SPACES? <')'>
 
   <Def> = <START_OF_LINE> (ConstDef | FuncDef);
 
@@ -124,32 +138,32 @@ such that it becomes a valid Clojure expression."
 
   <AnyChar> = #'.' | '\n';
 
-  IDENTIFIER = #'(?:\\$.)?[a-zA-Z](?:[a-zA-Z0-9_\\?]|\\$-)*';
+  IDENTIFIER = #'(?:\\$\\.)?[a-zA-Z](?:[a-zA-Z0-9_\\?]|\\$-)*';
 
-  ClojureSymbol = <'`'> #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
-  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*' ;
+  ClojureSymbol = <'`'> (#'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
+  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*') ;
 
   BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
-  Op10Exp =(Op9Exp  Op10 Op10Exp) / Op9Exp;
+  Op10Exp =(Op9Exp  Op10 SPACES? Op10Exp) / Op9Exp;
 
-  Op9Exp = (Op8Exp  Op9  Op10Exp) / Op8Exp;
+  Op9Exp = (Op8Exp  Op9 SPACES? Op10Exp) / Op8Exp;
 
-  Op8Exp = (Op7Exp  Op8  Op10Exp) / Op7Exp;
+  Op8Exp = (Op7Exp  Op8 SPACES? Op10Exp) / Op7Exp;
 
-  Op7Exp = (Op6Exp  Op7  Op10Exp) / Op6Exp;
+  Op7Exp = (Op6Exp  Op7 SPACES? Op10Exp) / Op6Exp;
 
-  Op6Exp = (Op5Exp   Op6  Op10Exp) / Op5Exp;
+  Op6Exp = (Op5Exp   Op6 SPACES? Op10Exp) / Op5Exp;
 
-  Op5Exp = (Op4Exp   Op5 Op10Exp) / Op4Exp;
+  Op5Exp = (Op4Exp   Op5 SPACES? Op10Exp) / Op4Exp;
 
-  Op4Exp = (Op3Exp   Op4  Op10Exp) / Op3Exp;
+  Op4Exp = (Op3Exp   Op4 SPACES? Op10Exp) / Op3Exp;
 
-  Op3Exp = (Op2Exp Op3  Op10Exp) / Op2Exp;
+  Op3Exp = (Op2Exp Op3 SPACES? Op10Exp) / Op2Exp;
 
-  Op2Exp = (Op1Exp  Op2  Op10Exp) / Op1Exp;
+  Op2Exp = (Op1Exp  Op2 SPACES? Op10Exp) / Op1Exp;
 
-  Op1Exp = (EXPRESSION3  Op1  EXPRESSION) / EXPRESSION3;
+  Op1Exp = (EXPRESSION3  Op1 SPACES? EXPRESSION) / EXPRESSION3;
 
   Op10 = NeverMatch;
 
@@ -174,6 +188,9 @@ such that it becomes a valid Clojure expression."
   NeverMatch = #'([&][+][@][%]){100000,}';
 
   Pipe2Expression = EXPRESSION2  (SPACES <'|>'> SPACES (FunctionExpr / EXPRESSION2))+;
+
+  Pipe2FunctionExpression =   (SPACES? <'|>'> SPACES (FunctionExpr / EXPRESSION2))+;
+
 
   PipeExpression = (ParenExpr / IDENTIFIER) (SPACES <'|>'> SPACES PipeCommands )+
 
@@ -219,7 +236,8 @@ such that it becomes a valid Clojure expression."
 
   GetExpression = SPACES? IDENTIFIER (<'['> EXPRESSION <']'>)+ SPACES?
 
-  EXPRESSION = EXPRESSION2 / PipeExpression / PipeFunctionExpression / Pipe2Expression
+  EXPRESSION = EXPRESSION2 / PipeExpression / PipeFunctionExpression /
+                    Pipe2Expression / Pipe2FunctionExpression
 
   EXPRESSION2 = BlockExpression / GetExpression /
   IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
@@ -307,9 +325,16 @@ such that it becomes a valid Clojure expression."
   " )
 
 (def line-parser
-  "Returns a parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
+  "Returns a parser that starts with grammar rule `Line'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
   (insta/parser parse-def
                 :start :Line
+                ;; :output-format :enlive
+                :total true))
+
+(def multiline-parser
+  "Returns a parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
+  (insta/parser parse-def
+                :start :Lines
                 ;; :output-format :enlive
                 :total true))
 
@@ -319,6 +344,8 @@ such that it becomes a valid Clojure expression."
   This is called like this:
   (instaparse.core/transform xform-rules parsetree)"
   {
+
+   :Lines (fn [& x] x)
 
    :Line (fn [& x] (first  x))
 
@@ -385,6 +412,13 @@ such that it becomes a valid Clojure expression."
                              (let [x `x#
                                    y `y#]
                                `(fn [~y] (~'as-> ~y ~x ~@(map #(% x) pipeline)))))
+
+   :Pipe2FunctionExpression (fn [& pipeline]
+                              (let [x `x#
+                                    y `y#]
+                               `(fn [~y] (~'as-> ~y ~x
+                                           ~@(map (fn[z] `(~z ~y))
+                                                  pipeline)))))
 
    :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
 
@@ -485,6 +519,12 @@ such that it becomes a valid Clojure expression."
                (let [x2 `x#]
                  `(~'fn [~x2] (~(-> x second second op-lookup) ~x2 ~v ))))
 
+   :Namespace (fn [& x]
+                (println "namespace " x)
+                (cons 'ns x))
+
+   :NamespaceName symbol
+
    :EXPRESSION identity
    :EXPRESSION2 identity
    :EXPRESSION3 identity
@@ -502,11 +542,12 @@ such that it becomes a valid Clojure expression."
 ;; that way
 (defmethod ef/-emit-form :maybe-method
   [x opts]
-  (->> x :form (str ".") symbol))
-
-(defmacro thread-it
-  [a b]
-  `(let [~'it ~a] ~b))
+  (let [ret (:form x)]
+    (if (or
+          (namespace ret)
+          (-> ret name (thread-it (<= 1 (.indexOf it ".")))))
+      ret
+      (->> (str "." ret) symbol))))
 
 (defn fixup-method-calls
   "Uses the JVM analyzer to look at function calls
@@ -523,7 +564,12 @@ into method invocations. So, toString(33) becomes
        :locals
        (->> opts
             :locals
-            (map (fn [x] [x {:op :binding :name x :form x :local :let}]))
+            (map (fn [x]
+                   [(-> x name symbol)
+                    (if (clojure.core/namespace x)
+                      {:op :def :name x :var x :children []}
+                      {:op :binding :name x :form x
+                       :local :let})]))
             (into {})))
       {:passes-opts
        {:validate/unresolvable-symbol-handler
@@ -532,9 +578,39 @@ into method invocations. So, toString(33) becomes
         }})
      (e/emit-form  (or (:emit opts) {:qualified-symbols true :hygienic true}) )
      (thread-it {:failed false :res it}))
-    (catch Exception e {:failed false :res code}) ;; if we get an exception, just punt
+    (catch Exception e
+      (do
+        ;; (println e)
+        {:failed false :res code})) ;; if we get an exception, just punt
     )
   )
+
+(defn split-into-lines
+  "Split the String into a series of lines grouped by lines that have a leading none-space 1st char"
+  [the-str]
+  (let [lines (.split the-str "\n")
+        lines (remove #(-> % .trim empty?) lines)
+        acc (atom [])
+
+        mostly-split
+        (mapcat
+         (fn [ln]
+           (if (.startsWith ln " ")
+             (do  (swap! acc conj ln) nil)
+             (if (empty? @acc)
+               (do  (swap! acc conj ln) nil)
+               (let [ret @acc]
+                 (reset! acc [ln])
+                 [ret]
+                 )
+               )
+             ))
+         lines)
+
+        split (conj (vec mostly-split) @acc)
+        ]
+    (map #(as-> % z (clojure.string/join "\n" z) (str z "\n") ) split)
+    ))
 
 (defn post-process
 "(post-process parse-tree)
@@ -548,12 +624,17 @@ else, return
 transform-result is Clojure form, e.g. `(def x 4)
 "
 ([parse-tree namespace opts]
- (if (instance? instaparse.gll.Failure parse-tree)
-   {:failed true :error parse-tree}
-   (->
-    (insta/transform xform-rules parse-tree)
-    (fixup-method-calls namespace opts))
-       )))
+ (let [do-fix-calls
+       (fn [x]
+         (if (:dont-fix opts)
+           {:failed false :res  x}
+           (fixup-method-calls x namespace opts)))]
+   (if (instance? instaparse.gll.Failure parse-tree)
+     {:failed true :error parse-tree}
+     (->
+      (insta/transform xform-rules parse-tree)
+      do-fix-calls)
+     ))))
 
 (defn- remove-hygene
   "Removes some of the hygenic symbols... makes for stables tests"
@@ -581,6 +662,34 @@ else, return
   ([the-line] (parse-line the-line *ns* {}))
   ([the-line namespace opts]
    (-> the-line .trim (str "\n") line-parser (post-process namespace opts))))
+
+(defn parse-multiline
+  "Parse all of the visi code
+  Arguments: the-line, namespace
+  the-line is a string.
+  namespace is a symbol (or string?) TODO
+  If namespace not given, defaults to nil.
+  Returns a map. If failed, returns
+  {:failed true, :error parse-tree}
+  else, return
+  {:failed false, :res parse-result}"
+  ([the-file] (parse-multiline the-file *ns* {}))
+  ([the-file namespace opts]
+   (let [names (atom [])]
+     (->>
+      the-file
+      split-into-lines
+      (map line-parser)
+      (map #(let [answer (post-process % namespace (merge opts {:locals @names}))]
+              (when (some-> answer :res first (= 'def))
+                (swap! names conj (-> answer :res second))
+                )
+              answer
+              ))
+
+      ;; (post-process namespace opts)
+      ))))
+
 
 (defn parse-for-tests
   "Parse the line into an S-expression"

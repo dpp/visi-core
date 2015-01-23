@@ -248,7 +248,7 @@ end")
           '(g x y)))
 
    (t/is (=
-          (vp/parse-and-eval-for-tests "f(x, y) = x + y; f(3,4)")
+          (vp/parse-and-eval-for-tests "f(x, y)=x+y; f(3,4)")
           7 ))
 
    (t/is (=
@@ -432,6 +432,8 @@ end")
 
    (t/is (= (vp/parse-and-eval-for-tests "100 |> # `Math/log10(it)") '2.0))
 
+   (t/is (= (vp/parse-and-eval-for-tests "qz = |> # `Math/log10(it) ; qz(100)") '2.0))
+
    (t/is (= (vp/parse-and-eval-for-tests "2 |> # `Math/pow(it, 3)") '8.0))
 
    (t/is (= (vp/parse-and-eval-for-tests "\"a\" |> # $.codePointAt(it,0)") '97))
@@ -475,7 +477,7 @@ end")
             '(fn* ([x y z] (clojure.lang.Numbers/add x 1)))))
 
    (t/is (= (vp/parse-and-eval-for-tests "f = (x,y) => x + y; f(3,4)") 7 ))
-   (t/is (= (apply (vp/parse-and-eval-for-tests "(x) => x + 1") 3 '()) 4 )) ; apply
+   (t/is (= (apply (vp/parse-and-eval-for-tests "x => x + 1") 3 '()) 4 )) ; apply
    (t/is (= (vp/parse-and-eval-for-tests "apply((x) => x + 1, [4])") 5 ))
   ;
    )
