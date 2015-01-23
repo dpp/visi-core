@@ -6,15 +6,10 @@
             [instaparse.core :as insta]
             ))
 
-(def vparser (insta/parser vp/parse-def :start :Line))
-(defn get-parsetree [code] (insta/parse vparser code))
-(defn get-transformed-result [code] (insta/transform vp/xform-rules (insta/parse vparser code)))
-(defn get-evaled-result [code] (eval (insta/transform vp/xform-rules (insta/parse vparser code))))
-
-(defmacro deftest-pending [name & body]
- (let [message (str "\n========\n" name " is pending !!\n========\n")]
-   `(deftest ~name
-         (println ~message))))
+;; (defmacro deftest-pending [name & body]
+;;  (let [message (str "\n===== \n" name "\n is pending!\n\n")]
+;;    `(t/deftest ~name
+;;          (println ~message))))
 
 (t/deftest
  test-parser
@@ -26,7 +21,10 @@
   "Test number"
 
   (t/is (=
+         (vp/parse-and-eval-for-tests "3 + 4")
+         (vp/parse-and-eval-for-tests "3+4")
          (vp/parse-and-eval-for-tests "3+ 4")
+         (vp/parse-and-eval-for-tests "3 +4")
          (vp/parse-and-eval-for-tests "3++4")
          (vp/parse-and-eval-for-tests "+3 + +4")
          7))
@@ -51,11 +49,7 @@
   ;; keyword has the form 「:‹x›」. It is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
 
   (t/is (= (vp/parse-for-tests ":x25707") :x25707))
-  (t/is (= (vp/parse-for-tests ":p40689") :p40689))
-
-  ;; note: keywords cannot happen together, such as 「:x :y」, unlike Clojure. For example, the following are illegal syntax: 「:x :y」「x y」 「3 4」「"a" "b"」
-
-  )
+  (t/is (= (vp/parse-for-tests ":p40689") :p40689)))
 
  (t/testing
   "Test StringLit." ; todo, test all the backslash special case
@@ -78,11 +72,11 @@
 
  (t/testing
   "Test RegexLit"
-  ;; FIXME: the visi regex syntax doesn't allow slash. This means, user cannot search any string that contains slash, possibly unless they use embedded Unicode char syntax
-
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a.+/, \"abc\")") "abc" ))
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a/, \"b\")") nil ))
-  (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文" )))
+  (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文" ))
+
+  (println "===== Test Regex syntax doesn't allow slash."))
 
  (t/testing
   "Test operators OprExpression"
@@ -118,7 +112,6 @@
             '3.0))
 
    (t/is (= (vp/parse-and-eval-for-tests "3 ^(2 / 3)") '2.080083823051904 ))
-
 
    (t/is (= (vp/parse-and-eval-for-tests "(3 +2) /4") 5/4)))
 
@@ -273,14 +266,12 @@ end")
 
   (t/is (=
          (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
-         '(def xyz (visi.core.runtime/build-rdd-from-url (visi.core.runtime/spark-context) "https://example.com/x.txt"))
-         ))
+         '(def xyz (visi.core.runtime/build-rdd-from-url (visi.core.runtime/spark-context) "https://example.com/x.txt"))))
 
   (t/is (=
          (vp/parse-for-tests "source x49519 = 7")
          '(def x49519 (visi.core.runtime/build-rdd-from-url
-                       (visi.core.runtime/spark-context) 7))
-         )))
+                       (visi.core.runtime/spark-context) 7)))))
 
  (t/testing
   "Test SINK syntax"
@@ -344,10 +335,9 @@ end")
 
    (t/is (= (vp/parse-for-tests "x .y" 'x)
             '(let* [it x]
-                   (if (clojure.core/map? it)
-                     (clojure.lang.RT/get it :y)
-                     (.y it)))
-            ))
+               (if (clojure.core/map? it)
+                   (clojure.lang.RT/get it :y)
+                 (.y it)))))
 
    (t/is (=
           (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
@@ -429,7 +419,7 @@ end")
 
   (t/testing
    "Test HashFunctionExpr"
-
+   ;; has the form 「|> # ‹x›(‹body›)」, where the ‹body› can contain 「it」, 「it1」, 「it2」, 「it3」. This basically means a lambda function. The ‹x› is a Java static method name, and 「it」 「it1」 means first arg, 「it2」 means 2nd arg, 「it」 means 3rd arg.
    (t/is (= (vp/parse-and-eval-for-tests "100 |> # `Math/log10(it)") '2.0))
 
    (t/is (= (vp/parse-and-eval-for-tests "qz = |> # `Math/log10(it) ; qz(100)") '2.0))
@@ -501,18 +491,10 @@ end")
 
  (t/testing
   "Test pipe commands and expressions"
-  ;; Pipe2Expression = EXPRESSION2 >>  (FunctionExpr / EXPRESSION2)
-  ;; PipeExpression = (ParenExpr / IDENTIFIER)  |> PipeCommands
-  ;; PipeFunctionExpression = |> PipeCommands
 
   (t/testing
    "Test Pipe2Expression"
-   ;; 「‹expr› >> ‹FunctionExpr›」
-   ;; can be chained.
-
-   ;; (get-parsetree "3 >> (x) => x + 1")
-   ;; (get-transformed-result "3 >> (x) => x + 1")
-   ;; (get-evaled-result "3 >> (x) => x + 1")
+   ;; 「‹expr› |> ‹FunctionExpr›」 can be chained.
 
    (t/is (=
           (vp/parse-and-eval-for-tests "3 |> (x) => x + 1")
@@ -562,7 +544,6 @@ end")
 
    (t/testing
     "Test Sortcommand"
-
     ;; sort command has the form
     ;; 「sort ‹x›」
     ;; 「sort ‹x›,ascending 」 (note, no space after comma) FIXME?
@@ -585,27 +566,28 @@ end")
     ;; (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb") ; java exception
 
   ; todo. figure out the semantics of sort
+    (println "===== Test pending: Sortcommand."))
 
-    )
+   (t/testing
+    "Test Reducecommand" ; todo
+    (println "===== Test pending: Reducecommand."))
 
    (t/testing
     "Test Foldcommand" ; todo
 
-    ;; 「reduce ‹IDENTIFIER›」
-    ;; 「reduce ‹FunctionExpr›」
+    ;; 「fold ‹IDENTIFIER›」
+    ;; 「fold ‹FunctionExpr›」
 
-    ;; 「reduce ‹vector› -> ‹FunctionExpr›」
-    ;; 「reduce ‹map› -> ‹FunctionExpr›」
-    ;; 「reduce ‹ParenExpr› -> ‹FunctionExpr›」
-    ;; 「reduce ‹ConstExpr› -> ‹FunctionExpr›」
-    ;; “reduce” can also be written as “fold”
+    ;; 「fold ‹vector› -> ‹FunctionExpr›」
+    ;; 「fold ‹map› -> ‹FunctionExpr›」
+    ;; 「fold ‹ParenExpr› -> ‹FunctionExpr›」
+    ;; 「fold ‹ConstExpr› -> ‹FunctionExpr›」
 
-    ;; (get-parsetree "|> reduce x")
+    ;; (get-parsetree "|> fold x")
     ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Foldcommand [:IDENTIFIER "x"]]]]]
 
-    ;; (get-parsetree "|> reduce [4, 3, 2] -> (x,y) => 4 ")
-
-    )
+    ;; (get-parsetree "|> fold [4, 3, 2] -> (x,y) => 4 ")
+    (println "===== Test pending: Foldcommand"))
 
    (t/testing
     "Test Filtercommand" ;todo
@@ -616,7 +598,7 @@ end")
 
     ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> filter :b") ; not implemented? todo.
 
-    )
+    (println "===== Test pending: Filtercommand."))
 
    (t/testing
     "Test Groupbycommand" ; todo
@@ -626,8 +608,7 @@ end")
     ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> group :b")
     ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> group :b")
     ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> group :b") ; todo
-
-    )
+    (println "===== Test pending: Groupbycommand."))
 
    (t/testing
     "Test Flatmapcommand" ; todo
@@ -637,10 +618,7 @@ end")
     ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
     ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
     ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> flatmap :b") ; todo
-
-    )
-   ;;
-   ))
+    (println "===== Test pending: Flatmapcommand."))))
 
  (t/testing
   "Test IfElseExpr"
@@ -825,22 +803,32 @@ end")
            3)))
 
  (t/testing
+  "Test IDENTIFIER and namespace related things."
+  (println "===== Test pending: IDENTIFIER, NamespaceName, Namespace, Requires, Import, Load."))
+ 
+ (t/testing
+  "Test Dropcommand"
+  (println "===== Test pending: Dropcommand."))
+
+ (t/testing
+  "Test Samplecommand"
+  (println "===== Test pending: Samplecommand."))
+
+ (t/testing
   "Test ClojureSymbol"
 
   ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
 
   (t/is (= (vp/parse-for-tests "x/y", 'x 'y)
-           '(clojure.lang.Numbers/divide x y)
-           ))
+           '(clojure.lang.Numbers/divide x y)))
 
   (t/is (= (vp/parse-for-tests "x.y/b" 'x 'b)
            '(clojure.lang.Numbers/divide
              (let* [it x]
-                   (if (clojure.core/map? it)
-                     (clojure.lang.RT/get it :y)
-                     (.y it)))
-             b)
-           ))
+               (if (clojure.core/map? it)
+                   (clojure.lang.RT/get it :y)
+                 (.y it)))
+             b)))
 
   (t/is (= (vp/parse-for-tests "x/y/z" 'x 'y 'z)
            '(clojure.lang.Numbers/divide x (clojure.lang.Numbers/divide y z)))) ; this becomes division
@@ -885,81 +873,3 @@ end")
 
  ;;
  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; scratch pad
-
-(comment ; visi code examples
-
-  ;; find where Math/cos came from in visi
-;; Math/cos(Math/PI / 3) ## expression
-;; cos_third_pi = Math/cos(Math/PI / 3) ## declaration
-
- ;; assign a lambda to a var
-;; plus_one = x => x + 1
-
- ;; normal function def
-;; plus_one(x) = x + 1
-
- ;; a more complex function def
- ;; note the  “if then else else” and nested if
-
-    ;; test_income(income) =
-    ;;   mag = Math/log10(income) ## the magnitude of the income
-    ;;   if mag < 3 then "low"
-    ;;   else if mag < 5 then "med"
-    ;;   else "high"
-
-;;; big chunk code example.
- ;; note the use of map, and reduce. Also, the merge-with, the 「(+)」, the lambda, the map.
- ;; note the use of  「‹var name›.sum」 to retrieve.
-;; Study in detail
-
-    ;; data = [1000, 10, 250000, 33] ## The data set
-    ;; mapped = map(identity, data) ## Don't change the elements
-    ;; reduced = reduce((acc, data) => merge-with((+), acc, {:cnt -> 1, :sum -> data}),
-    ;;                   {},
-    ;;                   mapped)
-    ;; average = reduced.sum / reduced.cnt
-
- ;; explanation:
-;; “reduce” is a clojure function. In visi syntax, it's called like this 「reduce(‹x›,‹y›,‹z›)」.
-;; The ‹x› is a visi lambda, of the form 「(‹params›)=>‹body›」, and there in the ‹body› we have the “merge-with(…)”, which is also a clojure function, of this form (merge-with f & maps)
- ;; the reduced.sum is to get the key “sum”'s value in collection named “reduced”
-
-;; the above can also be written as
-
-    ;; data = [1000, 10, 250000, 33] ## The data set
-
-    ;; reduced = data |>
-    ;;           map # Math/log10(it) |>
-    ;;           reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1, :sum -> data})
-
-    ;; average = reduced.sum / reduced.cnt
-
-)
-
-;; todo. warning: garbage syntax fed to vp/parse-for-tests returns nil. Need to find a way that also check parser error, either write a function using instaparse, or retrieve from vp/parse-line. This needs to be applied to all tests.
-
-(comment ;; random old sample visi code
-
-   ;; (def lower
-   ;;      (.cache
-   ;;       (as-> info x__8942__auto__
-   ;;             (visi.core.runtime/v-map x__8942__auto__
-   ;;                                 (fn [z__8941__auto__]
-   ;;                                     (.toLowerCase z__8941__auto__))))))
-
-   ;; (t/is (=
-   ;;        (vp/pre-process-line "sins = lower |> filter # (.contains(it, \"sin\") && not(.contains(it, \"sing\")))")
-   ;;        "(def sins (as-> lower x__8942__auto__ (visi.core.runtime/v-filter x__8942__auto__ (fn [it] (and (.contains it \"sin\") (not (.contains it \"sing\")))))))"))
-
-   ;; sins-plus-god-or-christ = sins |> filter # begin
-
-   ;; twit = v/stream-into-watching((v/create-twitter-stream({:duration -> 5000})) |> map .getText |> map calc_sent |> filter # (1 < it.pos || 1 < it.neg) |> reduce | merge-with((+)))
-
-   ;; lower-bible = (bible |> map .toLowerCase) >> # .cache(it)
-
-   ;; wc = (lower-bible |> mapcat # .split(it, "\\W+")) >> # v/v-map-to-pair(it, # [it, 1] ) >> # v/v-reduce-by-key(it, (+))
-
-)
