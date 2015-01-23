@@ -28,6 +28,7 @@
 ;; • be sure visi code org mode can be exported to html, with syntax highlighting
 
 (require 'cider)
+(require 'newcomment)
 
 (defvar visi-mode-hook nil "Standard hook for `visi-mode'")
 
@@ -47,7 +48,7 @@
 
 (defvar visi-visi-operators nil "list of Visi operators.")
 (setq visi-visi-operators
-      '( 
+      '(
 "="
 "+"
 "-"
@@ -754,7 +755,6 @@
       nil
       )))
 
-
 (defun visi-repl-connect ()
   ""
   (interactive)
@@ -779,9 +779,9 @@
 ;; the response is “alist”, and contains at least “id” and “session” keys.
 ;; Other standard response keys are “value”, “out”, “err”, “status”.
 
-;; The presence of a particular key determines the type of the response. 
+;; The presence of a particular key determines the type of the response.
 
-;; For example, if “value” key is present, the response is of type “value”, if “out” key is present the response is “stdout” etc.  
+;; For example, if “value” key is present, the response is of type “value”, if “out” key is present the response is “stdout” etc.
 
 ;; Depending on the type, the handler dispatches the appropriate value to one of the supplied
 ;; handlers: VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER, DONE-HANDLER, and
@@ -792,11 +792,12 @@
 ;; When `nrepl-log-messages' is non-nil, *nrepl-messages* buffer contains
 ;; server responses."
 
-
 (defun visi-eval-line-or-region (p1 p2)
   "Evaluate the current line, or text selection.
-You must call `visi-repl-connect' first.
-To eval clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
+If `universal-argument' is called first, insert result at cursor position.
+
+You must call `visi-repl-connect' first, when ready, call `visi-load-visi-lib'.
+To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
   (interactive
    (if (use-region-p)
        (list (region-beginning) (region-end))
@@ -806,7 +807,8 @@ To eval clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
         (let ()
           (cider-interactive-eval
            (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")"
-                   (buffer-substring-no-properties p1 p2)) p1)))
+                   (buffer-substring-no-properties p1 p2)) p1
+           (when current-prefix-arg (cider-eval-print-handler)))))
     (progn (error "No active nREPL connection. Call `visi-repl-connect' first."))))
 
 (defun visi-gen-random-namespace ()
@@ -891,9 +893,9 @@ To eval clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
   (use-local-map visi-keymap)
   (setq local-abbrev-table visi-abbrev-table)
 
-  (setq-local comment-start "##")
+  (setq-local comment-start "## ")
   (setq-local comment-end "")
-  (setq-local comment-start-skip "##+ *")
+  (setq-local comment-start-skip "##+ +")
   (setq-local comment-add 1)
   (setq-local comment-column 2)
 

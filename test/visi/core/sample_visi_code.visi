@@ -4,12 +4,12 @@ here */
 ##comment
 ## comment
    ## comment
-## comment "something". todo. 
+## comment "something". todo.
 1 + 2
 (+ 3 4)
 
-## add $namespace stuff. check `name $name .name 
-1#seconds + 1.#minutes  +  1.0#hours +  1#days - 7 * 4000%
+## add $namespace stuff. check `name $name .name
+1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6 ## 8.9061001E7
 3 < 2
 3 > 2
 3 <= 2
@@ -65,7 +65,7 @@ test_income(income) =
 ## Functions and Big Data
 ##Let's look at an example of computing the average of a collection of numbers using map/reduce:
 
-data = [1000, 10, 250000, 33] 
+data = [1000, 10, 250000, 33]
 mapped = map(identity, data)
 reduced = reduce((acc, data) =>
                   merge-with((+), ## Merge the accumulator and the current value
