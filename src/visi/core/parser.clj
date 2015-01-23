@@ -92,9 +92,12 @@ such that it becomes a valid Clojure expression."
     ;;([[_ a [_ op] b]] `(~(op-lookup op) ~a ~b))
     ))
 
+(def regexlit
+  #"#(_+|/+|\|+){1}+(.+?)\1{1}?")
+
 (def parse-def
   "Visi grammar in Instaparse format."
-  "
+  (str  "
   Lines = (Line (<'\n'>)*)*;
 
   Line = Namespace / (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*));
@@ -273,7 +276,7 @@ such that it becomes a valid Clojure expression."
 
   ConstExpr = SPACES? (Number | Keyword | StringLit | RegexLit) SPACES?;
 
-  RegexLit = #'#/[^/]*?/';
+  RegexLit = #'" regexlit "'
 
   FieldField =  (SPACES? <'.'> IDENTIFIER)
 
@@ -322,7 +325,7 @@ such that it becomes a valid Clojure expression."
   StringLit = #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
 
   Operator = Op1 | Op2 | Op3 | Op4 | Op5 | Op6 | Op7 | Op8 | Op9 | Op10;
-  " )
+  ") )
 
 (def line-parser
   "Returns a parser that starts with grammar rule `Line'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
@@ -337,6 +340,7 @@ such that it becomes a valid Clojure expression."
                 :start :Lines
                 ;; :output-format :enlive
                 :total true))
+
 
 (def xform-rules
   "A map for instaparse's transform. This is used to evaluate parse tree.
@@ -451,11 +455,15 @@ such that it becomes a valid Clojure expression."
                             (.replace "\\\\" "\\")
                             (.replace "\\t" "\t"))))
 
-   :RegexLit (fn [x] (let [c (count x)]
-                        (-> x
-                            (.substring 2 (- c 1))
-                            java.util.regex.Pattern/compile
-                            )))
+   :RegexLit (fn [x]
+               (->
+                (re-seq regexlit  x)
+                first
+                rest
+                rest
+                first
+                java.util.regex.Pattern/compile)
+               )
 
    :Keyword keyword
    :DottedThing keyword

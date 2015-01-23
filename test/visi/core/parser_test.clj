@@ -6,10 +6,10 @@
             [instaparse.core :as insta]
             ))
 
-;; (defmacro deftest-pending [name & body]
-;;  (let [message (str "\n===== \n" name "\n is pending!\n\n")]
-;;    `(t/deftest ~name
-;;          (println ~message))))
+(defmacro deftest-pending [name & body]
+ (let [message (str "\n===== \n" name "\n is pending!\n\n")]
+   `(t/deftest ~name
+         (println ~message))))
 
 (t/deftest
  test-parser
@@ -76,7 +76,8 @@
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a/, \"b\")") nil ))
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文" ))
 
-  (println "===== Test Regex syntax doesn't allow slash."))
+  (t/is (= (vp/parse-and-eval-for-tests "re$-seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x")))
+  )
 
  (t/testing
   "Test operators OprExpression"
@@ -805,7 +806,7 @@ end")
  (t/testing
   "Test IDENTIFIER and namespace related things."
   (println "===== Test pending: IDENTIFIER, NamespaceName, Namespace, Requires, Import, Load."))
- 
+
  (t/testing
   "Test Dropcommand"
   (println "===== Test pending: Dropcommand."))
