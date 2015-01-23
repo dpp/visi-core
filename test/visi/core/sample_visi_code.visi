@@ -5,10 +5,11 @@ here */
 ## comment
    ## comment
 ## comment "something". todo. 
-1 + 2 ## comment at end
-(+ 3 4) ## todo. highlighting of operator came from visi-clojure.core-words. Decide whether to allow (and if so, must occure after parenthesis only), and whether to create ones for visi.
+1 + 2
+(+ 3 4)
 
-1#seconds + 1.#minutes  +  1.0#hours +  1#days - 7 * 4000 ## todo
+## add $namespace stuff. check `name $name .name 
+1#seconds + 1.#minutes  +  1.0#hours +  1#days - 7 * 4000%
 3 < 2
 3 > 2
 3 <= 2
@@ -21,7 +22,7 @@ true && false || false
 "stringh" & "join"
 x %% y  ##  merge
 :xkeyword
-re-matches( #/a.+/, "abc") ## regex. todo. the regex must be highlighted
+re-matches( #/a.+/, "abc") ## regex
 x = 3; x
 x
 source xyz = "https://example.com/x.txt"
@@ -38,7 +39,7 @@ Math/sin(0.5) ## expression
 Math/cos(Math/PI / 3)
 xx = Math/cos(Math/PI / 3) ## declaration
 
-## higher order functions here. todo, add all the |> >> etc syntax
+## higher order functions here. todo, add all the |> etc syntax
 plus_one = x => x + 1
 plus_one(x) = x + 1
 
