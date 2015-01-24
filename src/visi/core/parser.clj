@@ -104,13 +104,19 @@ such that it becomes a valid Clojure expression."
 
   NamespaceName = #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)'
 
+  FullSymbol =  (#'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' / #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)')
+
+  Loadable = <'['> SPACES? FullSymbol SPACES? <','> SPACES? StringLit SPACES? <']'>
+
   Namespace = <'$namespace('> SPACES? NamespaceName (SPACES? <','> (Requires | Import | Load))* SPACES? <')'> SPACES? LineEnd;
 
-  Requires = SPACES? <'require('> SPACES? <')'>
+  Require = NamespaceName (SPACES <'as'> SPACES NamespaceName)?;
 
-  Import = SPACES? <'import('> SPACES? <')'>
+  Requires = SPACES? <'require('> (SPACES? Require SPACES? <','>)* (SPACES? Require)? SPACES? <')'>
 
-  Load = SPACES? <'load('> SPACES? <')'>
+  Import = SPACES? <'import('> (SPACES? NamespaceName SPACES? <','>)* (SPACES? NamespaceName)?  SPACES? <')'>
+
+  Load = SPACES? <'load('> (SPACES? Loadable SPACES? <','>)* (SPACES? Loadable)? SPACES? <')'>
 
   <Def> = <START_OF_LINE> (ConstDef | FuncDef);
 
@@ -519,6 +525,9 @@ such that it becomes a valid Clojure expression."
 
    :Partial1 (fn [x] (-> x second second op-lookup))
 
+   :Require (fn ([x] `(quote ~x))
+              ([x y] `(quote [~x :as ~y])))
+
    :Partial2 (fn [v x]
                (let [x2 `x#]
                  `(~'fn [~x2] (~(-> x second second op-lookup) ~v ~x2))))
@@ -527,11 +536,48 @@ such that it becomes a valid Clojure expression."
                (let [x2 `x#]
                  `(~'fn [~x2] (~(-> x second second op-lookup) ~x2 ~v ))))
 
-   :Namespace (fn [& x]
-                (println "namespace " x)
-                (cons 'ns x))
+   :Namespace (fn [ns & x]
+                (let [ret
+                      `(do
+                         (~'ns ~ns (:require [cemerick.pomegranate]))
+                         ~@(mapcat
+                             (fn [z]
+                               (when (= :Load (first z))
+                                 (map
+                                   (fn [q]
+                                     `(cemerick.pomegranate/add-dependencies :coordinates '[~q]
+                                                                            :repositories (merge cemerick.pomegranate.aether/maven-central
+                                                                                                 {"clojars" "http://clojars.org/repo"})))
+                                   (rest z))
+                                 )) x
+                             )
+
+                         ~@(mapcat
+                             (fn [z]
+                               (when (= :Import (first z))
+                                 (map
+                                   (fn [q]
+                                     `(~'clojure.core/import ~q))
+                                   (rest z))))
+                             x)
+
+                         ~@(mapcat
+                             (fn [z]
+                               (when (= :Requires (first z))
+                                 (map
+                                   (fn [q]
+                                     `(~'clojure.core/require ~q))
+                                   (rest z))))
+                             x)
+                         )]
+                  (with-meta ret {:dont-fix true :source `(quote ret)})
+                  ))
+
+   ;; :Import (fn [& x] `(:import ~@x))
 
    :NamespaceName symbol
+
+   :Loadable (fn [x y] `[~x ~y])
 
    :EXPRESSION identity
    :EXPRESSION2 identity
@@ -543,6 +589,7 @@ such that it becomes a valid Clojure expression."
           :else
          (-> x (.replace "$-" "-") (.replace "$." ".") symbol)))
    :ClojureSymbol symbol
+   :FullSymbol symbol
    })
 
 ;; something that is maybe a class that's not found
@@ -563,34 +610,40 @@ that are not associated with a namespace and turn them
 into method invocations. So, toString(33) becomes
 (.toString 33) rather than (toString 33)"
   [code namespace opts]
-  (try
-    (->
-     code
-     (ca/analyze
-      (assoc
-       (ca/empty-env)
-       :locals
-       (->> opts
+  (if (or
+        (-> code meta :dont-fix)
+        (and
+         (seq? code)
+         (= 'ns (first code))))
+    {:failed false :res code}
+    (try
+      (->
+        code
+        (ca/analyze
+          (assoc
+            (ca/empty-env)
             :locals
-            (map (fn [x]
-                   [(-> x name symbol)
-                    (if (clojure.core/namespace x)
-                      {:op :def :name x :var x :children []}
-                      {:op :binding :name x :form x
-                       :local :let})]))
-            (into {})))
-      {:passes-opts
-       {:validate/unresolvable-symbol-handler
-        (fn [a b c]
-          (assoc c :op :maybe-method))
-        }})
-     (e/emit-form  (or (:emit opts) {:qualified-symbols true :hygienic true}) )
-     (thread-it {:failed false :res it}))
-    (catch Exception e
-      (do
-        ;; (println e)
-        {:failed false :res code})) ;; if we get an exception, just punt
-    )
+            (->> opts
+                 :locals
+                 (map (fn [x]
+                        [(-> x name symbol)
+                         (if (clojure.core/namespace x)
+                           {:op :def :name x :var x :children []}
+                           {:op    :binding :name x :form x
+                            :local :let})]))
+                 (into {})))
+          {:passes-opts
+           {:validate/unresolvable-symbol-handler
+            (fn [a b c]
+              (assoc c :op :maybe-method))
+            }})
+        (e/emit-form (or (:emit opts) {:qualified-symbols true :hygienic true}))
+        (thread-it {:failed false :res it}))
+      (catch Exception e
+        (do
+          ;; (println e)
+          {:failed false :res code}))                       ;; if we get an exception, just punt
+      ))
   )
 
 (defn split-into-lines

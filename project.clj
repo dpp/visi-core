@@ -10,6 +10,7 @@
                  [org.clojure/tools.analyzer.jvm "0.6.5"]
                  [http-kit "2.1.18"]
                  [org.clojure/data.json "0.2.5"]
+                 [com.cemerick/pomegranate "0.3.0"]
                  ]
 
   :java-source-paths ["src/java"]
