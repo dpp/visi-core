@@ -7,7 +7,7 @@
             ))
 
 (defmacro deftest-pending [name & body]
- (let [message (str "\n===== \n" name "\n is pending!\n\n")]
+ (let [message (str "\n===== " name " is pending.\n")]
    `(t/deftest ~name
          (println ~message))))
 
@@ -76,8 +76,7 @@
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a/, \"b\")") nil ))
   (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文" ))
 
-  (t/is (= (vp/parse-and-eval-for-tests "re$-seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x")))
-  )
+  (t/is (= (vp/parse-and-eval-for-tests "re$-seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x"))))
 
  (t/testing
   "Test operators OprExpression"
@@ -541,85 +540,7 @@ end")
 
     (t/is (= (vp/parse-and-eval-for-tests
               "x = [1, 2, 3]; y = 1; x |> xform (+ y)")
-             '(2 3 4))))
-
-   (t/testing
-    "Test Sortcommand"
-    ;; sort command has the form
-    ;; 「sort ‹x›」
-    ;; 「sort ‹x›,ascending 」 (note, no space after comma) FIXME?
-    ;; 「sort ‹x›,declaration 」
-    ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
-    ;; sort command is part of pipecommands
-
-    ;; (get-parsetree "x |> sort y")
-    ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
-
-    ;; (get-transformed-result "x |> sort y")
-    ;; (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ y true))
-
-    ;; (get-transformed-result "x |> sort (x,y) => x > y")
-    ;; (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [x y] x) true)) y)
-
-    ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
-    ;; (clojure.core/let [x [8 3 4]] (> (as-> x x__30__auto__ (visi.core.runtime/v-sort-by x__30__auto__ (fn [aa bb] aa) true)) bb))
-
-    ;; (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb") ; java exception
-
-  ; todo. figure out the semantics of sort
-    (println "===== Test pending: Sortcommand."))
-
-   (t/testing
-    "Test Reducecommand" ; todo
-    (println "===== Test pending: Reducecommand."))
-
-   (t/testing
-    "Test Foldcommand" ; todo
-
-    ;; 「fold ‹IDENTIFIER›」
-    ;; 「fold ‹FunctionExpr›」
-
-    ;; 「fold ‹vector› -> ‹FunctionExpr›」
-    ;; 「fold ‹map› -> ‹FunctionExpr›」
-    ;; 「fold ‹ParenExpr› -> ‹FunctionExpr›」
-    ;; 「fold ‹ConstExpr› -> ‹FunctionExpr›」
-
-    ;; (get-parsetree "|> fold x")
-    ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Foldcommand [:IDENTIFIER "x"]]]]]
-
-    ;; (get-parsetree "|> fold [4, 3, 2] -> (x,y) => 4 ")
-    (println "===== Test pending: Foldcommand"))
-
-   (t/testing
-    "Test Filtercommand" ;todo
-    ;; 「filter ‹x›」
-
-    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> filter :b")
-    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> filter :b")
-
-    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> filter :b") ; not implemented? todo.
-
-    (println "===== Test pending: Filtercommand."))
-
-   (t/testing
-    "Test Groupbycommand" ; todo
-    ;; 「group ‹x›」
-    ;; 「group by ‹x›」
-
-    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> group :b")
-    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> group :b")
-    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> group :b") ; todo
-    (println "===== Test pending: Groupbycommand."))
-
-   (t/testing
-    "Test Flatmapcommand" ; todo
-    ;; 「flatmap ‹x›」
-    ;;  name alias: xform-cat, mapcat, flatmap
-
-    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
-    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
-    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> flatmap :b") ; todo
-    (println "===== Test pending: Flatmapcommand."))))
+             '(2 3 4))))))
 
  (t/testing
   "Test IfElseExpr"
@@ -650,6 +571,14 @@ end")
          (vp/parse-and-eval-for-tests "if( 3, 4, 5)")
          (vp/parse-and-eval-for-tests "if 3 then 4 else 5")
          (vp/parse-and-eval-for-tests "(3 ? 4 : 5)")
+         '4
+         ))
+
+  ;; nested if
+  (t/is (=
+         (vp/parse-and-eval-for-tests "if( 3, if( 7, 4, 8), 5)")
+         (vp/parse-and-eval-for-tests "if 3 then if 3 then 4 else 5 else 5")
+         (vp/parse-and-eval-for-tests "(3 ? (7 ? 4 : 8) : 5)")
          '4
          )))
 
@@ -804,18 +733,6 @@ end")
            3)))
 
  (t/testing
-  "Test IDENTIFIER and namespace related things."
-  (println "===== Test pending: IDENTIFIER, NamespaceName, Namespace, Requires, Import, Load."))
-
- (t/testing
-  "Test Dropcommand"
-  (println "===== Test pending: Dropcommand."))
-
- (t/testing
-  "Test Samplecommand"
-  (println "===== Test pending: Samplecommand."))
-
- (t/testing
   "Test ClojureSymbol"
 
   ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
@@ -874,3 +791,139 @@ end")
 
  ;;
  )
+
+(deftest-pending
+  test-Sortcommand
+  "Test Sortcommand"
+
+  ;; sort command has the form
+  ;; 「sort ‹x›」
+  ;; 「sort ‹x›,ascending」 (note, no space after comma. (todo FIXME?))
+  ;; 「sort ‹x›,declaration」
+  ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
+  ;; sort command is part of pipecommands, meaning,
+  ;; it must be part of
+  ;; PipeExpression or
+  ;; PipeFunctionExpression, meaning,
+  ;; the syntax must have 「… |>」  or 「|>」 in front
+
+  ;; (get-parsetree "|> sort")
+  ;; [:Line [:EXPRESSION [:Pipe2FunctionExpression [:EXPRESSION2 [:IDENTIFIER "sort"]]]]]
+;;;; note: no :Sortcommand here
+
+  ;; (get-parsetree "|> sort y")
+  ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Sortcommand [:IDENTIFIER "y"]]]]]
+
+  ;; (get-parsetree "x |> sort y")
+  ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
+
+  ;; (get-transformed-result "|> sort y")
+  ;; (clojure.core/fn [y33]
+  ;;                  (as-> y33 x32
+  ;;                        (visi.core.runtime/v-sort-by x32 y true)))
+
+  ;; (get-transformed-result "x |> sort y")
+  ;; (as-> x x30
+  ;;       (visi.core.runtime/v-sort-by x30 y true))
+
+  ;; so, to understand semantic of sort command, look at v-sort-by. See the order of its first 2 args.
+  ;; the first arg is thing to sort, the second is order function, like this 「thing |> sort func」
+
+  ;; now, since the func must be one of IDENTIFIER, Keyword, FunctionExpr. Let's try using FunctionExpr.
+
+  ;; (get-transformed-result "x |> sort (a,b) => a > b")
+  ;; (as-> x x30
+  ;;       (visi.core.runtime/v-sort-by x30
+  ;;                                    (fn [a b] (> a b)) true))
+
+  ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
+  ;; (clojure.core/let [x [8 3 4]]
+  ;;                   (as-> x x30
+  ;;                         (visi.core.runtime/v-sort-by x30
+  ;;                                                      (fn [aa bb] (> aa bb)) true)))
+
+
+  (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
+  ;; clojure.lang.Compiler$CompilerException: java.lang.RuntimeException: No such var: visi.core.runtime/ascending
+
+  ;; can't figure out what's wrong. Lots heavy stuff in runtime.clj
+
+  ;; let try a function
+  (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; x = [8, 3, 4]; x |> sort ff")
+  ;; same error.
+
+;; (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; ff(7,4)") ; true
+
+  ;; here's a possible Visi syntax issue. This
+;; x |> sort f,ascending
+;; is a valid Visi syntax. But if we replace f with a function expression
+;; x |> sort (aa , bb) => aa > bb,ascending
+  ;; then it is not a valid syntax.
+  ;; this violates “referential transparency”
+
+  ;; don't understand how to use sortCommand.
+  ;; this
+  ;; x = [8, 3, 4]; x |> sort
+  ;; is not visi sort command, as it is simply clojure sort.
+  ;; The proper minimal sortCommand syntax is 「data |> sort f」
+  ;; but, can't figure out what the data or function should be.
+  ;; normally, the data is array, but if so, what should the f be? as it should be one of IDENTIFIER, Keyword, FunctionExpr.
+
+  ;; note: this is a valid visi syntax:
+  ;; (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort")
+  ;; (3 4 8)
+  ;; but is not visi sortCommand. It essentially get turned into PipeFunctionExpression involving a clojure function named “sort”
+
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; scratch pad
+
+;; 2015-01-24
+;; look into the “re$-” part, and visi namespace
+;; (vp/parse-and-eval-for-tests "re$-matches( #/a.+/, \"abc\")")
+;; find out exactly how visi namespace works. seems “re$” or “re$-” is the visi syntax for calling the regex lib
+;; write test for it in the namespace test section
+
+
+;; todo, write test, or look into the following grammar rules
+;; IDENTIFIER, NamespaceName, Namespace, Requires, Import, Load
+;; Samplecommand , Dropcommand,
+;; FieldField, ForceField, MethodMethod, ForceMethod,
+;; Reducecommand.
+
+    ;; "Test Flatmapcommand" ; todo
+    ;; 「flatmap ‹x›」
+    ;;  name alias: xform-cat, mapcat, flatmap
+
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> flatmap :b")
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> flatmap :b") ; todo
+
+    ;; "Test Groupbycommand" ; todo
+    ;; 「group ‹x›」
+    ;; 「group by ‹x›」
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> group :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> group :b")
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> group :b") ; todo
+
+    ;; "Test Filtercommand" ;todo
+    ;; 「filter ‹x›」
+    ;; (get-parsetree "x = {:a -> 3, :b -> 4}; x |> filter :b")
+    ;; (get-transformed-result "x = {:a -> 3, :b -> 4}; x |> filter :b")
+    ;; (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x |> filter :b") ; not implemented? todo.
+
+  ;; "Test Foldcommand" ; todo
+
+  ;; 「fold ‹IDENTIFIER›」
+  ;; 「fold ‹FunctionExpr›」
+
+  ;; 「fold ‹vector› -> ‹FunctionExpr›」
+  ;; 「fold ‹map› -> ‹FunctionExpr›」
+  ;; 「fold ‹ParenExpr› -> ‹FunctionExpr›」
+  ;; 「fold ‹ConstExpr› -> ‹FunctionExpr›」
+
+  ;; (get-parsetree "|> fold x")
+  ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Foldcommand [:IDENTIFIER "x"]]]]]
+
+  ;; (get-parsetree "|> fold [4, 3, 2] -> (x,y) => 4 ")

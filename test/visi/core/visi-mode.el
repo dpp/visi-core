@@ -904,3 +904,18 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
   (run-mode-hooks 'visi-mode-hook))
 
 (provide 'visi-mode)
+
+;; helpful emacs command to find where a function/symbol is used.
+
+;; (defvar visi-src-dir "" "visi source dir, should end with slash.")
+;; (setq visi-src-dir "~/git/dpp/visi-core/")
+
+;; (defun grep-visi (myterm)
+;;   "Find all occurances visi source of the word under cursor or selection."
+;;   (interactive
+;;    (if (use-region-p)
+;;        (list (buffer-substring-no-properties (region-beginning) (region-end)))
+;;      (list (current-word))))
+;;   (rgrep myterm "*.clj" visi-src-dir nil))
+
+;; (global-set-key (kbd "<menu> u g") 'grep-visi)
