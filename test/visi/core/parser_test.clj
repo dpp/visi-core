@@ -730,7 +730,7 @@ end")
   (t/is (= (vp/parse-for-tests "x = 3; x")
            '(let* [x 3] x)))
 
-  (t/is (= (vp/parse-for-tests "f(x)=3; x")
+  (t/is (= (vp/parse-for-tests "f(x)=3; x", 'x)
            '(let* [f (fn* ([x] 3))] x)))
 
   (t/is (= (vp/parse-and-eval-for-tests "f(x)=3; f(4)")
@@ -773,7 +773,6 @@ end")
 
   (t/is (= (vp/parse-for-tests "x=[3]; 2")
            '(let* [x [3]] 2)
-           ;; '(clojure.core/let [x [3]] 2)
            ))
 
   (t/is (= (vp/parse-and-eval-for-tests
@@ -810,6 +809,7 @@ end")
   (t/is (=
          (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort identity")
          (vp/parse-and-eval-for-tests "ff(aa) = identity(aa); x = [8, 3, 4]; x |> sort ff")
+         (vp/parse-and-eval-for-tests "ff = identity; x = [8, 3, 4]; x |> sort ff")
          (vp/parse-and-eval-for-tests "([8, 3, 4]) |> sort identity")
          [3,4,8]))
 

@@ -87,9 +87,6 @@ such that it becomes a valid Clojure expression."
   (fn
     ([x] x)
     ([a [_ op] b] `(~(op-lookup  op) ~a ~b))
-    ;; ([[_ a op b]] `(~op ~a ~b))
-    ;;([a [_ op] b] `(~(op-lookup  op) ~a ~b))
-    ;;([[_ a [_ op] b]] `(~(op-lookup op) ~a ~b))
     ))
 
 (def regexlit
@@ -261,7 +258,7 @@ such that it becomes a valid Clojure expression."
 
   MergeExpr = EXPRESSION (SPACES? <'%%'> SPACES? Pair)+;
 
-  FuncCall = SPACES? (IDENTIFIER | ClojureSymbol)
+  FuncCall = SPACES? (IDENTIFIER / ClojureSymbol / ParenExpr)
              <'('> (EXPRESSION <','>)*
                    (EXPRESSION <','>?)? SPACES? <')'> SPACES?;
 
@@ -337,16 +334,7 @@ such that it becomes a valid Clojure expression."
   "Returns a parser that starts with grammar rule `Line'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
   (insta/parser parse-def
                 :start :Line
-                ;; :output-format :enlive
                 :total true))
-
-(def multiline-parser
-  "Returns a parser that starts with grammar rule `Lines'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
-  (insta/parser parse-def
-                :start :Lines
-                ;; :output-format :enlive
-                :total true))
-
 
 (def xform-rules
   "A map for instaparse's transform. This is used to evaluate parse tree.
@@ -747,8 +735,6 @@ else, return
                 )
               answer
               ))
-
-      ;; (post-process namespace opts)
       ))))
 
 
