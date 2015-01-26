@@ -642,3 +642,12 @@
   "a proxy to clojure.string/replace"
   [string regex replacement]
   (clojure.string/replace string regex replacement))
+
+(def ascending
+  "A constant for ascending sorts"
+  ::ascending)
+
+(def descending
+  "A constant for descending sorts"
+  ::descending)
+

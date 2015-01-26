@@ -796,7 +796,7 @@ end")
  ;;
  )
 
-(deftest-pending
+(t/deftest
   test-Sortcommand
   "Test Sortcommand"
   ;; sort command has the form
@@ -808,20 +808,21 @@ end")
   ;; like this「data |> sort func」
 
   (t/is (=
-         (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
-         (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; x = [8, 3, 4]; x |> sort ff")
-         (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; ([8, 3, 4]) |> sort ff")
+         (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort identity")
+         (vp/parse-and-eval-for-tests "ff(aa) = identity(aa); x = [8, 3, 4]; x |> sort ff")
+         (vp/parse-and-eval-for-tests "([8, 3, 4]) |> sort identity")
          [3,4,8]))
 
   ;; todo. need to look at clojup sorted map, its relation to clojure sort and sort-by functions, and what visi's sort do with map data, and visi's data types
 
   )
 
-(deftest-pending
+(t/deftest
   test-FieldExpr-2
   ;; should this work?
   (t/is (=
-         (vp/parse-and-eval-for-tests "({.y -> 7}) .y")
+         (vp/parse-and-eval-for-tests "({.y -> 7}) |> .y")
+         (vp/parse-and-eval-for-tests "apply(.y, [{.y -> 7}])")
          7)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
