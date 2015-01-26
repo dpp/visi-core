@@ -344,8 +344,12 @@ end")
           (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
           7))
 
-   ;; (vp/parse-and-eval-for-tests "{:y -> 7} .y") ;error.
-   )
+   (t/is (=
+          (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
+          (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
+          7))
+
+)
 
   (t/testing
    "Test MergeExpr"
@@ -509,9 +513,9 @@ end")
   (t/testing
    "Test PipeExpression"
    ;; PipeExpression basically pass a argument to the visi pipecommands
-   (t/is (= (vp/parse-and-eval-for-tests "x = [1, 4]; x |> map (+ 2)") '(3 6)))
-
-   ;; (vp/parse-and-eval-for-tests "[1, 2, 3] |> map (+ 2)") ; parse error. This should work?
+   (t/is (= (vp/parse-and-eval-for-tests "x = [1, 4]; x |> map (+ 2)")
+            (vp/parse-and-eval-for-tests " ([1, 4]) |> map (+ 2)")
+            '(3 6)))
 
    (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map (x) => $.toLowerCase(x)" )
             '("cd" "ab")))
@@ -795,86 +799,30 @@ end")
 (deftest-pending
   test-Sortcommand
   "Test Sortcommand"
-
   ;; sort command has the form
   ;; 「sort ‹x›」
   ;; 「sort ‹x›,ascending」 (note, no space after comma. (todo FIXME?))
   ;; 「sort ‹x›,declaration」
-  ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr
-  ;; sort command is part of pipecommands, meaning,
-  ;; it must be part of
-  ;; PipeExpression or
-  ;; PipeFunctionExpression, meaning,
-  ;; the syntax must have 「… |>」  or 「|>」 in front
+  ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr.
+  ;; sort command is part of pipecommands, meaning, it must be part of PipeExpression or PipeFunctionExpression, meaning, the syntax must have 「… |>」  or 「|>」 in front
+  ;; like this「data |> sort func」
 
-  ;; (get-parsetree "|> sort")
-  ;; [:Line [:EXPRESSION [:Pipe2FunctionExpression [:EXPRESSION2 [:IDENTIFIER "sort"]]]]]
-;;;; note: no :Sortcommand here
+  (t/is (=
+         (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
+         (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; x = [8, 3, 4]; x |> sort ff")
+         (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; ([8, 3, 4]) |> sort ff")
+         [3,4,8]))
 
-  ;; (get-parsetree "|> sort y")
-  ;; [:Line [:EXPRESSION [:PipeFunctionExpression [:Sortcommand [:IDENTIFIER "y"]]]]]
-
-  ;; (get-parsetree "x |> sort y")
-  ;; [:Line [:EXPRESSION [:PipeExpression [:IDENTIFIER "x"] [:Sortcommand [:IDENTIFIER "y"]]]]]
-
-  ;; (get-transformed-result "|> sort y")
-  ;; (clojure.core/fn [y33]
-  ;;                  (as-> y33 x32
-  ;;                        (visi.core.runtime/v-sort-by x32 y true)))
-
-  ;; (get-transformed-result "x |> sort y")
-  ;; (as-> x x30
-  ;;       (visi.core.runtime/v-sort-by x30 y true))
-
-  ;; so, to understand semantic of sort command, look at v-sort-by. See the order of its first 2 args.
-  ;; the first arg is thing to sort, the second is order function, like this 「thing |> sort func」
-
-  ;; now, since the func must be one of IDENTIFIER, Keyword, FunctionExpr. Let's try using FunctionExpr.
-
-  ;; (get-transformed-result "x |> sort (a,b) => a > b")
-  ;; (as-> x x30
-  ;;       (visi.core.runtime/v-sort-by x30
-  ;;                                    (fn [a b] (> a b)) true))
-
-  ;; (get-transformed-result "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
-  ;; (clojure.core/let [x [8 3 4]]
-  ;;                   (as-> x x30
-  ;;                         (visi.core.runtime/v-sort-by x30
-  ;;                                                      (fn [aa bb] (> aa bb)) true)))
-
-
-  (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort (aa , bb) => aa > bb")
-  ;; clojure.lang.Compiler$CompilerException: java.lang.RuntimeException: No such var: visi.core.runtime/ascending
-
-  ;; can't figure out what's wrong. Lots heavy stuff in runtime.clj
-
-  ;; let try a function
-  (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; x = [8, 3, 4]; x |> sort ff")
-  ;; same error.
-
-;; (vp/parse-and-eval-for-tests "ff(aa , bb) = aa > bb; ff(7,4)") ; true
-
-  ;; here's a possible Visi syntax issue. This
-;; x |> sort f,ascending
-;; is a valid Visi syntax. But if we replace f with a function expression
-;; x |> sort (aa , bb) => aa > bb,ascending
-  ;; then it is not a valid syntax.
-  ;; this violates “referential transparency”
-
-  ;; don't understand how to use sortCommand.
-  ;; this
-  ;; x = [8, 3, 4]; x |> sort
-  ;; is not visi sort command, as it is simply clojure sort.
-  ;; The proper minimal sortCommand syntax is 「data |> sort f」
-  ;; but, can't figure out what the data or function should be.
-  ;; normally, the data is array, but if so, what should the f be? as it should be one of IDENTIFIER, Keyword, FunctionExpr.
-
-  ;; note: this is a valid visi syntax:
-  ;; (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort")
-  ;; (3 4 8)
-  ;; but is not visi sortCommand. It essentially get turned into PipeFunctionExpression involving a clojure function named “sort”
+  ;; todo. need to look at clojup sorted map, its relation to clojure sort and sort-by functions, and what visi's sort do with map data, and visi's data types
 
   )
+
+(deftest-pending
+  test-FieldExpr-2
+  ;; should this work?
+  (t/is (=
+         (vp/parse-and-eval-for-tests "({.y -> 7}) .y")
+         7)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scratch pad
@@ -884,7 +832,6 @@ end")
 ;; (vp/parse-and-eval-for-tests "re$-matches( #/a.+/, \"abc\")")
 ;; find out exactly how visi namespace works. seems “re$” or “re$-” is the visi syntax for calling the regex lib
 ;; write test for it in the namespace test section
-
 
 ;; todo, write test, or look into the following grammar rules
 ;; IDENTIFIER, NamespaceName, Namespace, Requires, Import, Load
