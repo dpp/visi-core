@@ -6,7 +6,6 @@ here */
    ## comment
 ## comment "something". todo.
 1 + 2
-(+ 3 4)
 
 ## add $namespace stuff. check `name $name .name
 1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6 ## 8.9061001E7
@@ -14,32 +13,34 @@ here */
 3 > 2
 3 <= 2
 3 >= 2
-x != y
-x <> y
-x == y
+
+x = 4  ## #'user/x
+y = 3  ## #'user/y
+x != y ## true
+x <> y ## true
+x == y ## false
+
 true && false || false
 "string" & "join" ## string join
 "stringh" & "join"
 x %% y  ##  merge
 :xkeyword
-re-matches( #/a.+/, "abc") ## regex
+re$-matches( #/a.+/, "abc") ## regex
 x = 3; x
-x
 source xyz = "https://example.com/x.txt"
 sink xx = 3
 begin ## block code
     x = 4
     x + 1
 end
-f(x, y) = x + y; f(3,4) ## function def, function all
+f(x, y) = x + y; f(3,4) ## function def, function call
 y = [3, 7, 5] ## vector
 {:y -> 7, :b -> 8} ## map
 
-Math/sin(0.5) ## expression
+Math/sin(0.5) ## java stuff
 Math/cos(Math/PI / 3)
-xx = Math/cos(Math/PI / 3) ## declaration
+xx = Math/cos(Math/PI / 3)
 
-## higher order functions here. todo, add all the |> etc syntax
 plus_one = x => x + 1
 plus_one(x) = x + 1
 

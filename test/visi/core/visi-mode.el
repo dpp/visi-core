@@ -21,6 +21,8 @@
 
 ;; 2015-01-20 things to do
 
+;; • 2015-01-27 need to escape quote before seding to visi. ⁖  「"string" & "join"」. • also, check all ascii chars see if they need escape
+
 ;; • eliminate visi-load-visi-lib step
 ;; • make sure there's a doc on how to use/setup
 ;; • add inline doc
@@ -807,7 +809,7 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
         (let ()
           (cider-interactive-eval
            (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")"
-                   (buffer-substring-no-properties p1 p2)) p1
+                   (buffer-substring-no-properties p1 p2))
            (when current-prefix-arg (cider-eval-print-handler)))))
     (progn (error "No active nREPL connection. Call `visi-repl-connect' first."))))
 
@@ -919,3 +921,6 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
 ;;   (rgrep myterm "*.clj" visi-src-dir nil))
 
 ;; (global-set-key (kbd "<menu> u g") 'grep-visi)
+
+
+
