@@ -37,9 +37,9 @@ f(x, y) = x + y; f(3,4) ## function def, function call
 y = [3, 7, 5] ## vector
 {:y -> 7, :b -> 8} ## map
 
-Math/sin(0.5) ## java stuff
-Math/cos(Math/PI / 3)
-xx = Math/cos(Math/PI / 3)
+`Math/sin(0.5) ## java stuff
+`Math/cos(`Math/PI / 3)
+xx = `Math/cos(`Math/PI / 3)
 
 plus_one = x => x + 1
 plus_one(x) = x + 1

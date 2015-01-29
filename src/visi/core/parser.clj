@@ -323,7 +323,7 @@ such that it becomes a valid Clojure expression."
 
   DottedThing = SPACES? <'.'> IDENTIFIER SPACES?
 
-  Pair = (DottedThing / EXPRESSION) <'->'> EXPRESSION;
+  Pair = (DottedThing / EXPRESSION) (<'->'> / SPACES) EXPRESSION;
 
   StringLit = #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
 
