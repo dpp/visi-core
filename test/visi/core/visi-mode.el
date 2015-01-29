@@ -2,13 +2,12 @@
 
 ;;; REQUIREMENT
 ;; You need to have the following installed
-;; • Leiningen http://leiningen.org/
-;; • cider https://github.com/clojure-emacs/cider
-;; • visi engine.
+;; • Leiningen http://leiningen.org/ , version 2.5.0 or later
+;; • cider https://github.com/clojure-emacs/cider , version 0.8.2 or later
+;; • visi engine. 2015-01-27 or later
 
 ;;; SETUP
 ;; 1. Create a dir at ~/.emacs.d/lisp/
-;; Place visi-mode.el in your load path.
 ;; 2. Add the following to your emacs init.
 ;; (add-to-list 'load-path "~/.emacs.d/lisp/")
 ;; (add-to-list 'auto-mode-alist '("\\.visi\\'" . visi-mode))
@@ -21,12 +20,12 @@
 
 ;; 2015-01-20 things to do
 
-;; • 2015-01-27 need to escape quote before seding to visi. ⁖  「"string" & "join"」. • also, check all ascii chars see if they need escape
-
+;; • make org mode able to contain visi code, with syntax highlighting, and also eval it. see http://orgmode.org/worg/org-contrib/babel/intro.html
+;; • in org mode, when  visi code is changed (or perhaps by some command), update part of the org mode mode to show the evaluated result.
 ;; • eliminate visi-load-visi-lib step
+;; • 2015-01-27 possibly need to escape backslash. try regex ⁖  「re$-matches( #/a.+/, "abc")」 with lots slash or backslash and also contain double quotes.
 ;; • make sure there's a doc on how to use/setup
 ;; • add inline doc
-;; • make org mode able to contain visi code and also eval it.
 ;; • be sure visi code org mode can be exported to html, with syntax highlighting
 
 (require 'cider)
@@ -794,7 +793,7 @@
 ;; When `nrepl-log-messages' is non-nil, *nrepl-messages* buffer contains
 ;; server responses."
 
-(defun visi-eval-line-or-region (p1 p2)
+(defun visi-eval-line-or-region (pos1 pos2)
   "Evaluate the current line, or text selection.
 If `universal-argument' is called first, insert result at cursor position.
 
@@ -805,12 +804,16 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
        (list (region-beginning) (region-end))
      (list (line-beginning-position) (line-end-position))))
   (if (cider-connected-p)
-      (progn
-        (let ()
-          (cider-interactive-eval
-           (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")"
-                   (buffer-substring-no-properties p1 p2))
-           (when current-prefix-arg (cider-eval-print-handler)))))
+      (let* (
+             (input-text (buffer-substring-no-properties pos1 pos2))
+             (quoted-input-text (replace-regexp-in-string "\"" "\\\"" input-text "FIXEDCASE" "LITERAL")))
+
+        ;; (message "input-text is: 「%s」" input-text)
+        ;; (message "quoted-input-text is: 「%s」" quoted-input-text)
+        (cider-interactive-eval
+         (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")"
+                 quoted-input-text )
+         (when current-prefix-arg (cider-eval-print-handler))))
     (progn (error "No active nREPL connection. Call `visi-repl-connect' first."))))
 
 (defun visi-gen-random-namespace ()

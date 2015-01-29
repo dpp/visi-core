@@ -21,31 +21,42 @@ x <> y ## true
 x == y ## false
 
 true && false || false
-"string" & "join" ## string join
-"stringh" & "join"
-x %% y  ##  merge
+
+"this" & "that" ## string join
+
+## merge
+{"a" -> 7, "b" -> 8, "c" -> 9 } %% {"x" -> 3, "b" -> 2 }
+x = {"a" -> 7, "b" -> 8, "c" -> 9 }; y = {"x" -> 3, "b" -> 2 }; x %% y
+
 :xkeyword
-re$-matches( #/a.+/, "abc") ## regex
+
+## regex
+re$-matches( #/a.+/, "abc") ## "abc"
+
 x = 3; x
 source xyz = "https://example.com/x.txt"
 sink xx = 3
-begin ## block code
+
+begin
     x = 4
     x + 1
-end
+end ## 5
+
 f(x, y) = x + y; f(3,4) ## function def, function call
+
 y = [3, 7, 5] ## vector
+
 {:y -> 7, :b -> 8} ## map
 
-`Math/sin(0.5) ## java stuff
-`Math/cos(`Math/PI / 3)
-xx = `Math/cos(`Math/PI / 3)
+## java stuff
+`Math/sin(0.5) ## 0.479425538604203
+`Math/cos(`Math/PI / 3) ##  0.5000000000000001
 
-plus_one = x => x + 1
-plus_one(x) = x + 1
+plus_one = x => x + 1; plus_one(3) ## 4
+plus_one(x) = x + 1                ## #'user/plus_one
 
-calc_tax(income) = income * if(income > 5000, 40%, 20%)
-tax_rate(income) = if(income > 5000, 40%, 20%)
+calc_tax(income) = income * if(income > 5000, 40%, 20%) ## #'user/calc_tax
+tax_rate(income) = if(income > 5000, 40%, 20%)          ## #'user/tax_rate
 
 tax_rate(income) =
   if income > 5000 then
@@ -55,13 +66,17 @@ tax_rate(income) =
 
 calc_tax(income) = income * tax_rate(income)
 
+calc_tax(50000) ## 20000N
+
 ## In Visi, there are three constructs: expressions, declarations, and housekeeping.
 
 test_income(income) =
-  mag = Math/log10(income) ## the magnitude of the income
+  mag = `Math/log10(income) ## the magnitude of the income
   if mag < 3 then "low"
   else if mag < 5 then "med"
   else "high"
+
+test_income(5000) ## "med"
 
 ## Functions and Big Data
 ##Let's look at an example of computing the average of a collection of numbers using map/reduce:
@@ -82,7 +97,7 @@ average = reduced.sum / reduced.cnt
 
 data = [1000, 10, 250000, 33] ## The data set
 
-mapped = map(# Math/log10(it), data) ## Don't change the elements
+mapped = map(# `Math/log10(it), data) ## Don't change the elements
 
 reduced = reduce((acc, data) =>
                   merge-with((+), ## Merge the accumulator and the current value
@@ -101,7 +116,7 @@ average = reduced.sum / reduced.cnt
 data = [1000, 10, 250000, 33] ## The data set
 
 reduced = data |>
-          map # Math/log10(it) |>
+          map # `Math/log10(it) |>
           reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
                                                             :sum -> data})
 
