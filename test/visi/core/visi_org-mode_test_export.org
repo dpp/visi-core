@@ -1,0 +1,54 @@
+#+TITLE:sample org mode with Visi language
+#+AUTHOR: xah lee
+
+* How to Use
+
+Eval the following elisp lines. (you can select the region, then M-x eval-region)
+
+Make sure the paths in the following are correct.
+
+#+BEGIN_SRC emacs-lisp
+
+; load org-mode babel Visi support
+(load "/home/xah/git/dpp/visi-core/test/visi/core/ob-visi.el")
+
+; load org-mode babel Clojure support (optional)
+(load "/home/xah/git/dpp/visi-core/test/visi/core/ob-clojure.el")
+
+; load visi-mode.el
+(load "/home/xah/git/dpp/visi-core/test/visi/core/visi-mode.el")
+
+; set org mode to allow evaluation of visi code
+(org-babel-do-load-languages
+      'org-babel-load-languages
+      '((emacs-lisp . t)
+      (clojure . t)
+      (visi . t)
+      ))
+
+#+END_SRC
+
+Now, reopen this file.
+
+Visi code should now have syntax coloring.
+
+* Visi Code Samples
+
+#+BEGIN_SRC visi :results value :exports both
+true && false || false
+3 + 4
+#+END_SRC
+
+#+RESULTS:
+: truefalsefalse3#<core$_PLUS_ clojure.core$_PLUS_@648c87ae>4
+
+Note: TODO: the result is not correct. Need to wrap visi.core.parser/parse-and-eval-for-tests in org-babel-execute:visi
+
+* How to eval/export Visi code.
+
+Call the following commands.
+
+M-x cider-jack-in (wait for it to show a REPL prompt)
+M-x visi-load-visi-lib (wait for 5 seconds.)
+
+Now, you can use normal org-mode commands to eval Visi code or export it.
