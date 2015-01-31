@@ -66,3 +66,25 @@
 (defmethod running-job :default
   []
   false)
+
+(defn fix-namespace
+  "Make the current namespace Visi-friendly. Does 'use runtime, clojure.string, clojure.data, then does aliases for all the functions with - in them"
+  []
+  (when (not (find-var (symbol (str (-> *ns* .name name) "/$$fixed$$"))))
+    (eval '(def $$fixed$$ true))
+    (eval '(use 'visi.core.runtime))
+    (eval '(use 'clojure.data))
+
+
+    (doseq [[key value] (.getMappings *ns*)]
+      (let [kn (str key)
+            repl (.replace kn "-" "_" )
+            matches (re-matches #"[a-zA-Z_$][a-zA-Z\d_$]+" repl)
+            symd (symbol repl)
+            found (get (.getMappings *ns*) symd)
+            ]
+        (when (and
+                (not= kn repl)
+                matches
+                (not found))
+          (.refer *ns* symd value))))))
