@@ -12,6 +12,22 @@
          (println ~message))))
 
 (t/deftest
+  namespace-stuff
+  (t/testing "does the namespace stuff work?")
+
+  (t/is (= 42 (try
+                (let [my-ns (clojure.main/with-bindings (ns test.dude) (find-ns 'test.dude))
+                      eval-in-ns (fn [x] (clojure.main/with-bindings
+                                           (in-ns 'test.dude)
+                                           (eval x)))]
+                  (some-> (vp/parse-line "x = 8; x + 1" my-ns {}) :res eval-in-ns)
+                  (some-> (vp/parse-line "add_one(x) = x + 1" my-ns {}) :res eval-in-ns)
+                  (-> (vp/parse-line "add_one(41)" my-ns {}) :res eval-in-ns)
+                  )
+                (finally (remove-ns 'test.dude)))))
+  )
+
+(t/deftest
  test-parser
  (t/testing
   "Test test garbage syntax"
@@ -823,7 +839,16 @@ end")
   (t/is (=
          (vp/parse-and-eval-for-tests "({.y -> 7}) |> .y")
          (vp/parse-and-eval-for-tests "apply(.y, [{.y -> 7}])")
+         (vp/parse-and-eval-for-tests "invoke(.y, {.y -> 7})")
          7)))
+
+(t/deftest
+  func-aliases
+  (t/is (= (vp/parse-and-eval-for-tests "join(\",\", [1, 2, 3])")
+          "1,2,3" ))
+  (t/is (= (vp/parse-and-eval-for-tests "if_not(true, 44, 55)")
+           55))
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scratch pad

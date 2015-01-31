@@ -8,6 +8,8 @@
    [clojure.tools.analyzer.passes.emit-form :as ef]
    ))
 
+(def ^:dynamic *current-line* nil)
+
 (defmacro thread-it
   [a b]
   `(let [~'it ~a] ~b))
@@ -17,10 +19,12 @@
 Returns a new res, but with metadata attached to the second element of res.
 the new metadata is metadata of res, plus a new pair {:source res}"
   [res]
+  (binding [*print-meta* true]
   (cons (first res)
         (cons
-         (vary-meta (second res) merge {:source `(quote  ~res)})
-         (drop 2 res))))
+         (vary-meta (second res) merge {:visi-source *current-line*
+                                        :clj-source (pr-str res)})
+         (drop 2 res)))))
 
 (def multipliers
 "A map for converting units into milliseconds.
@@ -97,7 +101,9 @@ such that it becomes a valid Clojure expression."
   (str  "
   Lines = (Line (<'\n'>)*)*;
 
-  Line = Namespace / (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*));
+  Line = Namespace / (<LineComment> <'\n'>) / ((<BlockComment> <'\n'>) | <LineComment>)* (SINK / Def / Source / (EXPRESSION LineEnd*) / EmptyLine);
+
+  EmptyLine = SPACES? LineEnd*;
 
   NamespaceName = #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)'
 
@@ -293,7 +299,7 @@ such that it becomes a valid Clojure expression."
 
   <FunctionExpr> = HashFunctionExpr / HashFunctionExpr2 / HashFunctionExpr3 / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
 
-  PartialFunction = SPACES? <'|'> SPACES FuncCall
+  PartialFunction = (SPACES? ('|' | '<|') SPACES FuncCall)
 
   HashFunctionExpr = SPACES? <'#'> SPACES (DotFuncExpr / EXPRESSION2)
 
@@ -418,6 +424,8 @@ such that it becomes a valid Clojure expression."
                                            ~@(map (fn[z] `(~z ~y))
                                                   pipeline)))))
 
+   :EmptyLine (fn [& _] nil)
+
    :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
 
    :Foldcommand (fn
@@ -509,7 +517,7 @@ such that it becomes a valid Clojure expression."
 
    :HashFunctionExpr3 (fn [x] `(~'fn [~'it ~'it2 ~'it3] ~x))
 
-  :PartialFunction (fn [x] (cons 'partial x))
+   :PartialFunction (fn [type x]  (cons (if (= type "<|") 'visi.core.runtime/pre-partial 'partial) x))
 
    :Partial1 (fn [x] (-> x second second op-lookup))
 
@@ -533,9 +541,10 @@ such that it becomes a valid Clojure expression."
                                (when (= :Load (first z))
                                  (map
                                    (fn [q]
-                                     `(cemerick.pomegranate/add-dependencies :coordinates '[~q]
-                                                                            :repositories (merge cemerick.pomegranate.aether/maven-central
-                                                                                                 {"clojars" "http://clojars.org/repo"})))
+                                     `(cemerick.pomegranate/add-dependencies
+                                        :coordinates '[~q]
+                                        :repositories (merge cemerick.pomegranate.aether/maven-central
+                                                             {"clojars" "http://clojars.org/repo"})))
                                    (rest z))
                                  )) x
                              )
@@ -588,6 +597,7 @@ such that it becomes a valid Clojure expression."
   (let [ret (:form x)]
     (if (or
           (namespace ret)
+          (not (re-matches #"[a-zA-Z_$][a-zA-Z\d_$]*" (name ret)))
           (-> ret name (thread-it (<= 1 (.indexOf it ".")))))
       ret
       (->> (str "." ret) symbol))))
@@ -604,34 +614,35 @@ into method invocations. So, toString(33) becomes
          (seq? code)
          (= 'ns (first code))))
     {:failed false :res code}
-    (try
-      (->
-        code
-        (ca/analyze
-          (assoc
-            (ca/empty-env)
-            :locals
-            (->> opts
-                 :locals
-                 (map (fn [x]
-                        [(-> x name symbol)
-                         (if (clojure.core/namespace x)
-                           {:op :def :name x :var x :children []}
-                           {:op    :binding :name x :form x
-                            :local :let})]))
-                 (into {})))
-          {:passes-opts
-           {:validate/unresolvable-symbol-handler
-            (fn [a b c]
-              (assoc c :op :maybe-method))
-            }})
-        (e/emit-form (or (:emit opts) {:qualified-symbols true :hygienic true}))
-        (thread-it {:failed false :res it}))
-      (catch Exception e
-        (do
-          ;; (println e)
-          {:failed false :res code}))                       ;; if we get an exception, just punt
-      ))
+    (clojure.main/with-bindings
+      (in-ns (.name namespace))
+      (vu/fix-namespace)
+      (try
+        (->
+          code
+          (ca/analyze
+            (assoc
+              (ca/empty-env)
+              :locals
+              (->> opts
+                   :locals
+                   (map (fn [x]
+                          [(-> x name symbol)
+                           (if (clojure.core/namespace x)
+                             {:op :def :name x :var x :children []}
+                             {:op :binding :name x :form x
+                              :local :let})]))
+                   (into {})))
+            {:passes-opts
+             {:validate/unresolvable-symbol-handler
+              (fn [_ _ c]
+                (assoc c :op :maybe-method))
+              }})
+          (e/emit-form (or (:emit opts) {:qualified-symbols true :hygienic true}))
+          (thread-it {:failed false :res it}))
+        (catch Exception _
+          {:failed false :res code})                     ;; if we get an exception, just punt
+        )))
   )
 
 (defn split-into-lines
@@ -710,7 +721,8 @@ else, return
  {:failed false, :res parse-result}"
   ([the-line] (parse-line the-line *ns* {}))
   ([the-line namespace opts]
-   (-> the-line .trim (str "\n") line-parser (post-process namespace opts))))
+    (binding [*current-line* the-line]
+      (-> the-line .trim (str "\n") line-parser (post-process namespace opts)))))
 
 (defn parse-multiline
   "Parse all of the visi code
