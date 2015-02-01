@@ -14,7 +14,7 @@ but the "more" is adding to what's in Excel.
 Let's start with a simple expression... a thing that executes
 code and returns a value:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
  1 + 1
 #+END_SRC
 
@@ -29,7 +29,7 @@ the dependent cells update their values.
 In Visi, you name the placeholders for values. They are called variables.
 So, to create a variable:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 x = 5
 
@@ -42,9 +42,9 @@ and "y" is dependent on "x".
 
 In Visi and Excel, you can apply a function to a value:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
-Math/sin(0.5)
+`Math/sin(0.5)
 
 #+END_SRC
 
@@ -57,7 +57,7 @@ In Visi, you can create your own functions. So you can use
 the same logic in many places without having to copy/paste that logic
 over and over:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 calc_tax(income) = income * if(income > 5000, 40%, 20%)
 
@@ -65,7 +65,7 @@ calc_tax(income) = income * if(income > 5000, 40%, 20%)
 
 And functions can call other functions:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 tax_rate(income) = if(income > 5000, 40%, 20%)
 
@@ -76,7 +76,7 @@ calc_tax(income) = income * tax_rate(income)
 Visi syntax can span multiple lines and if/then/else can be
 a formula and it has its own syntax that might be easier to read:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 tax_rate(income) =
   if income > 5000 then
@@ -91,7 +91,7 @@ calc_tax(income) = income * tax_rate(income)
 And Visi code can contain comments so that you and others who
 read the code can understand what's going on:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 tax_rate(income) =
   if income > 5000 then
@@ -115,11 +115,11 @@ A declaration is the association of a value with a name
 such that the named declaration (variable) can be accessed
 by other parts of your program. For example:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
-Math/cos(Math/PI / 3) ## expression
+`Math/cos(Math/PI / 3) ## expression
 
-cos_third_pi = Math/cos(Math/PI / 3) ## declaration
+cos_third_pi = `Math/cos(Math/PI / 3) ## declaration
 
 #+END_SRC
 
@@ -127,7 +127,7 @@ Note that declaration of a function is just fancy syntax, both of
 the following declarations mean the same thing (don't worry about the
 function expression syntax for the moment):
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 plus_one = x => x + 1
 
@@ -155,10 +155,10 @@ that come after the declaration in the expression. This allows
 you to compute an expression and use the result in many
 places within a larger expression. For example:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 test_income(income) =
-  mag = Math/log10(income) ## the magnitude of the income
+  mag = `Math/log10(income) ## the magnitude of the income
   if mag < 3 then "low"
   else if mag < 5 then "med"
   else "high"
@@ -185,7 +185,7 @@ run on different computers as well.
 Let's look at an example of computing the average of a collection of
 numbers using map/reduce:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 data = [1000, 10, 250000, 33] ## The data set
 
@@ -209,11 +209,11 @@ mapping phase results in the same collection that was input.
 
 FIXME -- explain reduce
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 data = [1000, 10, 250000, 33] ## The data set
 
-mapped = map(# Math/log10(it), data) ## Don't change the elements
+mapped = map(# `Math/log10(it), data) ## Don't change the elements
 
 reduced = reduce((acc, data) =>
                   merge-with((+), ## Merge the accumulator and the current value
@@ -235,7 +235,7 @@ chaining operations.
 
 We can rewrite the above with:
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 data = [1000, 10, 250000, 33] ## The data set
 
@@ -251,7 +251,7 @@ average = reduced.sum / reduced.cnt
 Okay, so we've looked a little at Visi syntax... but let's get to
 Big Data Hello World... word count.
 
-#+BEGIN_SRC python
+#+BEGIN_SRC visi
 
 ## split into words
 split_words = |> map # re-replace(it, #/\W/, " ") ## Replace non-words with spaces

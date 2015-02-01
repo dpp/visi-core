@@ -1,22 +1,19 @@
-#+TITLE:sample org mode with Visi language
-#+AUTHOR: xah lee
+#+TITLE:Sample org mode with Visi Language
 
-* How to Use
+* How to Setup Org Mode Babel for Visi
 
-Eval the following elisp lines. (you can select the region, then M-x eval-region)
-
-Make sure the paths in the following are correct.
+Evaluate the following emacs lisp lines. (you can select the region, then M-x eval-region) Make sure the paths in the following are correct.
 
 #+BEGIN_SRC emacs-lisp
 
+; load visi-mode.el
+(load "~/git/dpp/visi-core/test/visi/core/visi-mode.el")
+
 ; load org-mode babel Visi support
-(load "/home/xah/git/dpp/visi-core/test/visi/core/ob-visi.el")
+(load "~/git/dpp/visi-core/test/visi/core/ob-visi.el")
 
 ; load org-mode babel Clojure support (optional)
-(load "/home/xah/git/dpp/visi-core/test/visi/core/ob-clojure.el")
-
-; load visi-mode.el
-(load "/home/xah/git/dpp/visi-core/test/visi/core/visi-mode.el")
+(load "~/git/dpp/visi-core/test/visi/core/ob-clojure.el")
 
 ; set org mode to allow evaluation of visi code
 (org-babel-do-load-languages
@@ -25,6 +22,14 @@ Make sure the paths in the following are correct.
       (clojure . t)
       (visi . t)
       ))
+
+; optional
+(setq-local org-confirm-babel-evaluate nil)
+
+; if loaded successfully, the following returns t
+(featurep 'visi-mode)
+(featurep 'ob-visi)
+(featurep 'ob-clojure)
 
 #+END_SRC
 
@@ -35,14 +40,22 @@ Visi code should now have syntax coloring.
 * Visi Code Samples
 
 #+BEGIN_SRC visi :results value :exports both
-true && false || false
 3 + 4
 #+END_SRC
 
-#+RESULTS:
-: truefalsefalse3#<core$_PLUS_ clojure.core$_PLUS_@648c87ae>4
+#+BEGIN_SRC visi :results value :exports both
+true && false || false
+#+END_SRC
 
-Note: TODO: the result is not correct. Need to wrap visi.core.parser/parse-and-eval-for-tests in org-babel-execute:visi
+#+RESULTS:
+: false
+
+#+BEGIN_SRC visi :results value :exports both
+1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6
+#+END_SRC
+
+#+RESULTS:
+: 8.9061001E7
 
 * How to eval/export Visi code.
 
@@ -52,3 +65,90 @@ M-x cider-jack-in (wait for it to show a REPL prompt)
 M-x visi-load-visi-lib (wait for 5 seconds.)
 
 Now, you can use normal org-mode commands to eval Visi code or export it.
+
+For example, put cursor in a code block, and press 【C-c C-c】.
+Or, export to HTML with code and result by 【C-c C-e h h】
+
+* More Visi Examples
+
+#+BEGIN_SRC visi :results value :exports both
+ x = 4; x > 7
+#+END_SRC
+
+#+RESULTS:
+: false
+
+#+BEGIN_SRC visi :results value :exports both
+begin
+ x = 4
+ x != 7
+end
+#+END_SRC
+
+#+RESULTS:
+: true
+
+#+BEGIN_SRC visi :results value :exports both
+"aa" & "bb"
+#+END_SRC
+
+#+RESULTS:
+: aabb
+
+#+BEGIN_SRC visi :results value :exports both
+{"a" -> 7, "b" -> 8, "c" -> 9 } %% {"x" -> 3, "b" -> 2 }
+#+END_SRC
+
+#+RESULTS:
+| x | 3 | a | 7 | b | 2 | c | 9 |
+
+#+BEGIN_SRC visi :results value :exports both
+re$-matches( #/a.+/, "abc") ## "abc"
+#+END_SRC
+
+#+RESULTS:
+: abc
+
+#+BEGIN_SRC visi :results value :exports both
+begin
+    x = 4
+    x + 2
+end
+#+END_SRC
+
+#+RESULTS:
+: 6
+
+#+BEGIN_SRC visi :results value :exports both
+`Math/sin(0.5)
+#+END_SRC
+
+#+RESULTS:
+: 0.479425538604203
+
+#+BEGIN_SRC visi :results value :exports both
+tax_rate(income) = if(income > 5000, 40%, 20%)
+
+calc_tax(income) = income * tax_rate(income)
+
+calc_tax(50000)
+#+END_SRC
+
+#+RESULTS:
+
+
+
+#+BEGIN_SRC visi :results value :exports both
+tax_rate(income) =
+  if income > 5000 then
+    40%
+  else
+    20%
+
+calc_tax(income) = income * tax_rate(income)
+
+calc_tax(50000)
+#+END_SRC
+
+#+RESULTS:
+
