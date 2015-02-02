@@ -14,13 +14,15 @@ here */
 3 <= 2
 3 >= 2
 
-x = 4  ## #'user/x
-y = 3  ## #'user/y
-x != y ## true
-x <> y ## true
-x == y ## false
-
 true && false || false
+
+begin
+ x = 4  ## #'user/x
+ y = 3  ## #'user/y
+ x != y ## true
+ x <> y ## true
+ x == y ## false
+end
 
 "this" & "that" ## string join
 
@@ -55,9 +57,11 @@ y = [3, 7, 5] ## vector
 plus_one = x => x + 1; plus_one(3) ## 4
 plus_one(x) = x + 1                ## #'user/plus_one
 
+## function def
 calc_tax(income) = income * if(income > 5000, 40%, 20%) ## #'user/calc_tax
 tax_rate(income) = if(income > 5000, 40%, 20%)          ## #'user/tax_rate
 
+## multi-line function def
 tax_rate(income) =
   if income > 5000 then
     40%

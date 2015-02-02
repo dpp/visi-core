@@ -5,9 +5,10 @@
 ;; • Leiningen http://leiningen.org/ , version 2.5.0 or later
 ;; • cider https://github.com/clojure-emacs/cider , version 0.8.2 or later
 ;; • visi engine. 2015-01-27 or later
+;; • GNU Emacs 24.3 or later
 
 ;;; SETUP
-;; 1. Create a dir at ~/.emacs.d/lisp/
+;; 1. Create a dir at ~/.emacs.d/lisp/ , place visi-mode.el in that directory.
 ;; 2. Add the following to your emacs init.
 ;; (add-to-list 'load-path "~/.emacs.d/lisp/")
 ;; (add-to-list 'auto-mode-alist '("\\.visi\\'" . visi-mode))
@@ -15,7 +16,7 @@
 
 ;;; TO EVAL VISI CODE
 ;; Call `visi-repl-connect' to start Cider.
-;; After Cider is ready, call `visi-load-visi-lib'. Wait a few seconds for visi lib to load
+;; After Cider is ready (you'll see a buffer popping up with prompt), call `visi-load-visi-lib'. Wait a few seconds for visi lib to load
 ;; Call `visi-eval-line-or-region'
 
 ;; 2015-01-20 things to do
@@ -33,6 +34,7 @@
 
 (defvar visi-mode-hook nil "Standard hook for `visi-mode'")
 
+(add-to-list 'auto-mode-alist '("\\.visi\\'" . visi-mode))
 
 
 ;; syntax table
@@ -771,7 +773,7 @@
   (interactive)
   (let ()
     (cider-interactive-eval "(ns emacsvisi-test (:require [clojure.test] [visi.core.parser] [visi.core.runtime] [visi.core.util]))")
-    (message "`visi-load-visi-lib' called.")
+    (message "`visi-load-visi-lib' called, wait for 4 seconds.")
     ))
 
 ;; write a nrepl handler.
@@ -814,7 +816,7 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
          (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")"
                  quoted-input-text )
          (when current-prefix-arg (cider-eval-print-handler))))
-    (progn (error "No active nREPL connection. Call `visi-repl-connect' first."))))
+    (user-error "No active nREPL connection. Call `visi-repl-connect' first.")))
 
 (defun visi-gen-random-namespace ()
   ""
@@ -868,16 +870,9 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
 (defvar visi-keymap nil "Keybinding for `visi-mode'")
 (progn
   (setq visi-keymap (make-sparse-keymap))
-  (define-key visi-keymap (kbd "<tab>") 'visi-complete-or-indent)
-
   (define-key visi-keymap (kbd "C-x C-e") 'visi-eval-line-or-region)
   (define-key visi-keymap (kbd "C-x M-c") 'cider-connect)
   (define-key visi-keymap (kbd "C-x M-j") 'cider-jack-in)
-
-  (define-prefix-command 'visi-single-keys-keymap)
-  (define-key visi-keymap (kbd "<menu> e") visi-single-keys-keymap)
-  (define-key visi-single-keys-keymap (kbd "w m") 'visi-eval-line-or-region)
-
 )
 
 
@@ -892,9 +887,8 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
   (kill-all-local-variables)
   (setq mode-name "visi")
   (setq major-mode 'visi-mode)
-  (setq font-lock-defaults '((visi-font-lock-keywords)))
-
   (set-syntax-table visi-syntax-table)
+  (setq font-lock-defaults '((visi-font-lock-keywords)))
   (use-local-map visi-keymap)
   (setq local-abbrev-table visi-abbrev-table)
 
@@ -909,21 +903,3 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
   (run-mode-hooks 'visi-mode-hook))
 
 (provide 'visi-mode)
-
-;; helpful emacs command to find where a function/symbol is used.
-
-;; (defvar visi-src-dir "" "visi source dir, should end with slash.")
-;; (setq visi-src-dir "~/git/dpp/visi-core/")
-
-;; (defun grep-visi (myterm)
-;;   "Find all occurances visi source of the word under cursor or selection."
-;;   (interactive
-;;    (if (use-region-p)
-;;        (list (buffer-substring-no-properties (region-beginning) (region-end)))
-;;      (list (current-word))))
-;;   (rgrep myterm "*.clj" visi-src-dir nil))
-
-;; (global-set-key (kbd "<menu> u g") 'grep-visi)
-
-
-
