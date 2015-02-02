@@ -1,4 +1,5 @@
-(ns visi.core.util)
+(ns visi.core.util
+  (:require [clojure.data.codec.base64 :as b64]))
 
 (defn has-class
   "Is the class loadable?"
@@ -87,3 +88,15 @@
                matches
                (not found))
           (.refer *ns* symd value))))))
+
+(defn bytes? [x]
+  (= (Class/forName "[B")
+     (.getClass x)))
+
+(defn decode-base64
+  [value]
+  (cond
+    (string? value) (decode-base64 (.getBytes value "UTF-8"))
+    (bytes? value) (b64/decode value)
+    :else (decode-base64 (pr-str value)))
+  )

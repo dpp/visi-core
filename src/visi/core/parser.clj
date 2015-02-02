@@ -469,7 +469,7 @@ such that it becomes a valid Clojure expression."
 
    ;; :VectorExpr (fn [& x] `(-> (list ~@x) vec)) ;; better to have a vector literal, but the analyzer barfs on vector lits
    :VectorExpr (fn [& x] `[~@x]) ;; better to have a vector literal, but the analyzer barfs on vector lits
-   
+
    :SetExpr (fn [& x] `#{~@x})
 
    :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
@@ -559,7 +559,7 @@ such that it becomes a valid Clojure expression."
                   (with-meta ret {:dont-fix true :source `(quote ret)})))
 
    ;; :Import (fn [& x] `(:import ~@x))
-   
+
    :NamespaceName symbol
 
    :Loadable (fn [x y] `[~x ~y])
@@ -724,6 +724,20 @@ else, return
                 (swap! names conj (-> answer :res second)))
               answer))))))
 
+(defn parse-and-eval-multiline
+  "parses all the lines. If they are all legal, then
+eval all the lines"
+  ([the-file] (parse-and-eval-multiline the-file *ns* {}))
+  ([the-file namespace opts]
+   (let [answers (parse-multiline the-file namespace opts)
+
+         mostly
+         (if (every? #(-> % :failed not) answers)
+           (->> answers (map #(-> % :res eval))
+                (remove #(instance? clojure.lang.Var %)))
+           answers
+           )]
+     (if (= 1 (count mostly)) (first mostly) mostly))))
 
 (defn parse-for-tests
   "Parse the line into an S-expression"

@@ -119,7 +119,7 @@
   (let* (
          (ξquoted-visi-code (replace-regexp-in-string "\"" "\\\"" φvisi-code "FIXEDCASE" "LITERAL"))
          (ξexpanded-visi-code (org-babel-expand-body:visi ξquoted-visi-code φob-params))
-         (ξclojureCode (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")" ξexpanded-visi-code))
+         (ξclojureCode (format "(visi.core.parser/parse-and-eval-multiline \"%s\")" ξexpanded-visi-code))
          (ξresultParams (cdr (assoc :result-params φob-params)))
          ξresult)
 

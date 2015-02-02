@@ -111,7 +111,7 @@ re$-matches( #/a.+/, "abc") ## "abc"
 
 #+BEGIN_SRC visi :results value :exports both
 begin
-    x = 4
+    x = 8
     x + 2
 end
 #+END_SRC
@@ -151,4 +151,3 @@ calc_tax(50000)
 #+END_SRC
 
 #+RESULTS:
-
