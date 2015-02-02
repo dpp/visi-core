@@ -9,8 +9,8 @@
             [clojure.tools.analyzer.passes.jvm.emit-form :as e])
 
   (:import ;; FIXME (clojure.tools.nrepl.transport Transport)
-           (clojure.lang IDeref)
-           (java.util UUID)))
+   (clojure.lang IDeref)
+   (java.util UUID)))
 
 
 ;; # How to convert an simple piece of Clojure into an agnostic Map, Reduce, etc. command
@@ -85,8 +85,7 @@
   (iter-func2-for [this form])
   (iter-func-for [this form])
   (func3-for [this form])
-  (func2-for [this form])
-)
+  (func2-for [this form]))
 
 
 
@@ -112,8 +111,7 @@
   (ti-reduce-by-key [this func])
   (ti-filter [this func])
   (ti-sort-by [this func ascending])
-  (ti-drop [this count])
-  )
+  (ti-drop [this count]))
 
 (defn FIXME
   "Not implemented -- throw an exception"
@@ -122,8 +120,7 @@
 
 (extend java.util.List
   FunctionFor
-  {
-   :void-func-for (fn [this form] (eval form))
+  {:void-func-for (fn [this form] (eval form))
    :double-func-for (fn [this form] (eval form))
    :double-iter-func-for (fn [this form] (eval form))
    :bool-func-for (fn [this form] (eval form))
@@ -133,103 +130,99 @@
    :iter-func2-for (fn [this form] (eval form))
    :iter-func-for (fn [this form] (eval form))
    :func3-for (fn [this form] (eval form))
-   :func2-for (fn [this form] (eval form))
-   }
+   :func2-for (fn [this form] (eval form))}
 
   TransformInfo
-  {
-   :ti-aggregate
+  {:ti-aggregate
    (fn [this zero-value seq-op comb-op]
-     (FIXME)
-     )
+     (FIXME))
 
-    :ti-flat-map
-    (fn [this func]
-      (mapcat (func-for this func) this))
+   :ti-flat-map
+   (fn [this func]
+     (mapcat (func-for this func) this))
 
-    :ti-flat-map-double
-    (fn [this func]
-      (mapcat (func-for this func) this))
+   :ti-flat-map-double
+   (fn [this func]
+     (mapcat (func-for this func) this))
 
-    :ti-flat-map-pair
-    (fn [this func]
-      (mapcat (func-for this func) this))
+   :ti-flat-map-pair
+   (fn [this func]
+     (mapcat (func-for this func) this))
 
-    :ti-fold
-    (fn [this zero func]
-      (reduce (func-for this func) zero this))
+   :ti-fold
+   (fn [this zero func]
+     (reduce (func-for this func) zero this))
 
-    :ti-foreach
-    (fn [this func]
-      (dorun (map (func-for this func) this)))
+   :ti-foreach
+   (fn [this func]
+     (dorun (map (func-for this func) this)))
 
-    :ti-group-by
-    (fn [this func]
-      (FIXME))
+   :ti-group-by
+   (fn [this func]
+     (FIXME))
 
-    :ti-map
-    (fn [this func]
-      (map (func-for this func) this))
+   :ti-map
+   (fn [this func]
+     (map (func-for this func) this))
 
-    :ti-map-to-double
-    (fn [this func]
-      (map (func-for this func) this))
+   :ti-map-to-double
+   (fn [this func]
+     (map (func-for this func) this))
 
-    :ti-map-to-pair
-    (fn [this func]
-      (map (func-for this func) this))
+   :ti-map-to-pair
+   (fn [this func]
+     (map (func-for this func) this))
 
-    :ti-reduce
-    (fn [this func]
-      (reduce (func-for this func) this))
+   :ti-reduce
+   (fn [this func]
+     (reduce (func-for this func) this))
 
-    :ti-do-sink
-    (fn [rdd name]
-      (FIXME))
+   :ti-do-sink
+   (fn [rdd name]
+     (FIXME))
 
-    :ti-drop
-    (fn
-      [rdd num]
-      (drop num rdd))
+   :ti-drop
+   (fn
+     [rdd num]
+     (drop num rdd))
 
-    :ti-aggregate-by-key
-    (fn [this zero-value seq-op comb-op]
-      (FIXME))
+   :ti-aggregate-by-key
+   (fn [this zero-value seq-op comb-op]
+     (FIXME))
 
-    :ti-combine-by-key
-    (fn [this create-combiner merge-value merge-combiners]
-      (FIXME))
+   :ti-combine-by-key
+   (fn [this create-combiner merge-value merge-combiners]
+     (FIXME))
 
-    :ti-fold-by-key
-    (fn [this zero-value func]
-      (FIXME))
+   :ti-fold-by-key
+   (fn [this zero-value func]
+     (FIXME))
 
-    :ti-map-values
-    (fn [this func]
-      (map (func-for this func) this))
+   :ti-map-values
+   (fn [this func]
+     (map (func-for this func) this))
 
 
-    :ti-reduce-by-key
-    (fn [this func]
-      (FIXME))
+   :ti-reduce-by-key
+   (fn [this func]
+     (FIXME))
 
-    :ti-filter
-    (fn [this func]
-      (filter (func-for this func) this))
+   :ti-filter
+   (fn [this func]
+     (filter (func-for this func) this))
 
-    :ti-sort-by
-    (fn [this func ascending]
+   :ti-sort-by
+   (fn [this func ascending]
       ;; FIXME deal with descending
-      (sort-by (func-for this func) this))
+     (sort-by (func-for this func) this))
 
-    :ti-flat-map-values
-    (fn [this func]
-      (FIXME))
+   :ti-flat-map-values
+   (fn [this func]
+     (FIXME))
 
-    :ti-key-by
-    (fn [this func]
-      (FIXME))
-   })
+   :ti-key-by
+   (fn [this func]
+     (FIXME))})
 
 (defn- make-array-thing
   [it]
@@ -240,8 +233,7 @@
   [info op]
   (if (= op (:op info))
     [info]
-    (mapcat (fn [item] (mapcat #(find-op % op) (make-array-thing (item info)))) (:children info))
-    ))
+    (mapcat (fn [item] (mapcat #(find-op % op) (make-array-thing (item info)))) (:children info))))
 
 (defn- find-vars
   "finds all the var references in the analyzed code"
@@ -261,8 +253,7 @@
                                       :name x
                                       :form x
                                       :local :let}]))
-                     (into {}))))
-   ))
+                     (into {}))))))
 
 (defn- find-bound
   "Returns the vars that are bound outside the function"
@@ -270,16 +261,15 @@
   (filter (fn [v]
             (let [var-name (:name v)
                   info (-> v :env :locals (get var-name))]
-              (= :binding (:op info)))
-            ) the-vars))
+              (= :binding (:op info)))) the-vars))
 
 (defn wrap-o-matic
   "Wraps the form in a let statement. Used by the clean-it-up macro"
   [lets form]
   `(let [~@(mapcat
-              (fn [[name value]]
-                [(symbol name) value])
-              lets)] ~form))
+            (fn [[name value]]
+              [(symbol name) value])
+            lets)] ~form))
 
 (defn clean-it-up
   [form the-env]
@@ -296,10 +286,9 @@
                                 :form x
                                 :local :let}]))
                (into {}))))
-        emitted (e/emit-form analyzed {:qualified-symbols true :hygienic true} )
-        bound (-> analyzed find-vars find-bound )
-        base `(quote (~'eval ~emitted))
-        ]
+        emitted (e/emit-form analyzed {:qualified-symbols true :hygienic true})
+        bound (-> analyzed find-vars find-bound)
+        base `(quote (~'eval ~emitted))]
     (if (empty? bound)
       base
       `(visi.core.runtime/wrap-o-matic
@@ -379,10 +368,9 @@
 (defn- record-access
   [info]
   (if-let [{:keys [segmentID code] :as msg}
-           (or
-            ;; FIXME v-mid/current-message
-            ;; clojure.tools.nrepl.middleware.interruptible-eval/*msg* ;; FIXME
-            )]
+           (or;; FIXME v-mid/current-message
+;; clojure.tools.nrepl.middleware.interruptible-eval/*msg* ;; FIXME
+)]    
     (when segmentID
       (swap! info assoc segmentID (dissoc msg :transport)))))
 
@@ -402,27 +390,25 @@
 
 (defn- recompute
   [info]
-  (let [segments (-> info deref vals vec)
-        ;; FIXME runner (inte/interruptible-eval nil)
-        ]
+  (let [segments (-> info deref vals vec);; FIXME runner (inte/interruptible-eval nil)
+]    
     (reset! info {})
     (future
       (dorun
        (map
         (fn [msg]
           #_(let [transport
-                (reify Transport
-                  (recv [this] )
-                  (recv [this timeout] )
-                  (send [this resp]
-                    (when (not (contains? (:status resp) :done))
-                      (add-msg-for-session
-                       (:session resp)
-                       (assoc resp :segmentID (:segmentID msg)
-                              :clear "true")))
-                    this))]
-            ;; FIXME (runner (assoc msg :transport transport))
-            ))
+                  (reify Transport
+                    (recv [this])
+                    (recv [this timeout])
+                    (send [this resp]
+                      (when (not (contains? (:status resp) :done))
+                        (add-msg-for-session
+                         (:session resp)
+                         (assoc resp :segmentID (:segmentID msg)
+                                :clear "true")))
+                      this))];; FIXME (runner (assoc msg :transport transport))
+))        
 
         segments)))))
 
@@ -437,47 +423,42 @@
 (defn build-watching-var
   ([initial-value] (build-watching-var initial-value {}))
   ([initial-value opts]
-     (let [value (atom initial-value)
-           ref-cnt (atom 0)
-           running (atom true)
-           dependents (atom {})
-           source (:source opts)]
-       (reify
-         ;; render/Renderable
-         ;; (render [this] (render/render @value))
+   (let [value (atom initial-value)
+         ref-cnt (atom 0)
+         running (atom true)
+         dependents (atom {})
+         source (:source opts)]
+     (reify
+       IDeref
+       (deref [this]
+         (record-access dependents)
+         @value)
 
-         IDeref
-         (deref [this]
-           (record-access dependents)
-           @value)
+       Iterable
+       (iterator [this]
+         (record-access dependents)
+         (.iterator (to-iterable @value)))
 
-         Iterable
-         (iterator [this]
-           (record-access dependents)
-           (.iterator (to-iterable @value)))
-
-         Settable
-         (s-add-ref [this]
-           (swap! ref-cnt inc))
-         (s-remove-ref [this]
-           (let [cnt (swap! ref-cnt dec)]
-             (recompute dependents)
-             (when (<= 0 cnt)
-               (reset! dependents {})
-               (reset! value nil)
-               (reset! running false))
-             ))
-         (s-running? [this] @running)
-         (s-source? [this] source)
-         (s-set! [this new-value]
-           (let [ret (reset! value new-value)]
-             (recompute dependents)
-             ret))
-         (s-swap! [this func]
-           (let [ret (swap! value func)]
-             (recompute dependents)
-             ret
-             ))))))
+       Settable
+       (s-add-ref [this]
+         (swap! ref-cnt inc))
+       (s-remove-ref [this]
+         (let [cnt (swap! ref-cnt dec)]
+           (recompute dependents)
+           (when (<= 0 cnt)
+             (reset! dependents {})
+             (reset! value nil)
+             (reset! running false))))
+       (s-running? [this] @running)
+       (s-source? [this] source)
+       (s-set! [this new-value]
+         (let [ret (reset! value new-value)]
+           (recompute dependents)
+           ret))
+       (s-swap! [this func]
+         (let [ret (swap! value func)]
+           (recompute dependents)
+           ret))))))
 
 
 (defmulti spark-context (fn [& x] 42))
@@ -488,11 +469,11 @@
   (let [response (httpc/get url)
         type (-> @response :headers :content-type)]
     (cond
-     (.startsWith type "application/json")
-     (let [ret (json/read-str (-> @response :body))]
-       ret)
-     :else
-     (-> @response :body))))
+      (.startsWith type "application/json")
+      (let [ret (json/read-str (-> @response :body))]
+        ret)
+      :else
+      (-> @response :body))))
 
 (defmulti build-rdd-from-url (fn [x _] :default))
 
@@ -511,8 +492,7 @@
 
 (defn read_url
   [url]
-  (get-data-from-url url)
-  )
+  (get-data-from-url url))
 
 (defn starts-with [^String s ^String s2] (.startsWith s s2))
 
@@ -554,18 +534,17 @@
   "Put the Stream into a watching var"
   ([stream] (stream-into-watching stream {:start true}))
   ([stream props]
-     (let [watching-var (build-watching-var [] {:source stream})]
-       (.foreachRDD stream (func-for
-                            stream
-                            (quote
-                             (fn [rdd]
-                               (when (s-running? watching-var)
-                                 (s-swap! watching-var
-                                          (fn [data]
-                                            (into data (.collect rdd)))))))))
-       (when (:start props) (-> stream .context .start))
-       watching-var
-       )))
+   (let [watching-var (build-watching-var [] {:source stream})]
+     (.foreachRDD stream (func-for
+                          stream
+                          (quote
+                           (fn [rdd]
+                             (when (s-running? watching-var)
+                               (s-swap! watching-var
+                                        (fn [data]
+                                          (into data (.collect rdd)))))))))
+     (when (:start props) (-> stream .context .start))
+     watching-var)))
 
 (defn mark-watching-var
   [var-name definition value]
@@ -576,23 +555,22 @@
                  (fn [key reference old new]
                    (cond
                     ;; no change, do nothing
-                    (identical? new old)
-                    nil
+                     (identical? new old)
+                     nil
 
                     ;; increase the ref count
-                    (identical? value new)
-                    (s-add-ref value)
+                     (identical? value new)
+                     (s-add-ref value)
 
                     ;; setting to a different value
                     ;; cause dependent items to recompute
-                    (identical? value old)
-                    (do
-                      (remove-watch the-var guid)
-                      (s-remove-ref value))
+                     (identical? value old)
+                     (do
+                       (remove-watch the-var guid)
+                       (s-remove-ref value))
 
                     ;; ignore
-                    :else nil)
-                   ))))
+                     :else nil)))))
   value)
 
 (defmulti send-text identity)
@@ -659,13 +637,13 @@
    :static true}
   ([f] f)
   ([f arg1]
-    (fn [& args] (apply f (concat args (list arg1))  )))
+   (fn [& args] (apply f (concat args (list arg1)))))
   ([f arg1 arg2]
-    (fn [& args] (apply f (concat args (list arg1 arg2 )))))
+   (fn [& args] (apply f (concat args (list arg1 arg2)))))
   ([f arg1 arg2 arg3]
-    (fn [& args] (apply f (concat args (list arg1 arg2 arg3)))))
+   (fn [& args] (apply f (concat args (list arg1 arg2 arg3)))))
   ([f arg1 arg2 arg3 & more]
-    (fn [& args] (apply f  (concat args (list arg1 arg2 arg3) more)))))
+   (fn [& args] (apply f  (concat args (list arg1 arg2 arg3) more)))))
 
 ;; function aliases
 (def s_replace clojure.string/replace)
@@ -677,13 +655,13 @@
 (def lower_case clojure.string/lower-case)
 (def re_quote_replacement clojure.string/re-quote-replacement)
 (def replace_first clojure.string/replace-first)
-(def split clojure.string/split )
-(def split_lines clojure.string/split-lines )
-(def trim clojure.string/trim )
-(def trim_newline clojure.string/trim-newline )
-(def triml clojure.string/triml )
-(def trimr clojure.string/trimr )
-(def upper_case clojure.string/upper-case )
+(def split clojure.string/split)
+(def split_lines clojure.string/split-lines)
+(def trim clojure.string/trim)
+(def trim_newline clojure.string/trim-newline)
+(def triml clojure.string/triml)
+(def trimr clojure.string/trimr)
+(def upper_case clojure.string/upper-case)
 
 
 

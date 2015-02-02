@@ -5,8 +5,7 @@
    [clojure.string :as cljstr]
    [clojure.tools.analyzer.jvm :as ca]
    [clojure.tools.analyzer.passes.jvm.emit-form :as e]
-   [clojure.tools.analyzer.passes.emit-form :as ef]
-   ))
+   [clojure.tools.analyzer.passes.emit-form :as ef]))
 
 (def ^:dynamic *current-line* nil)
 
@@ -15,19 +14,19 @@
   `(let [~'it ~a] ~b))
 
 (defn insert-meta
-"Takes 1 argument: res. res is a Clojure form, e.g. `(def x 4).
+  "Takes 1 argument: res. res is a Clojure form, e.g. `(def x 4).
 Returns a new res, but with metadata attached to the second element of res.
 the new metadata is metadata of res, plus a new pair {:source res}"
   [res]
   (binding [*print-meta* true]
-  (cons (first res)
-        (cons
-         (vary-meta (second res) merge {:visi-source *current-line*
-                                        :clj-source (pr-str res)})
-         (drop 2 res)))))
+    (cons (first res)
+          (cons
+           (vary-meta (second res) merge {:visi-source *current-line*
+                                          :clj-source (pr-str res)})
+           (drop 2 res)))))
 
 (def multipliers
-"A map for converting units into milliseconds.
+  "A map for converting units into milliseconds.
 Example:
  (get multipliers \".seconds\" )
 returns 1000."
@@ -38,7 +37,7 @@ returns 1000."
    "#days" (* 24 60 60 1000)})
 
 (defn- process-inner
-"Used to transform visi syntax for :InlineFunc grammar rule.
+  "Used to transform visi syntax for :InlineFunc grammar rule.
  x = 3; x
 becomes
  [:InlineFunc '(def x 3) 'x]
@@ -55,8 +54,7 @@ is applied, resulting
              ~(if (= 'defn (first a))
                 `(fn ~@(-> a rest rest))
                 (nth a 2))]
-         ~(process-inner o core)))
-    ))
+         ~(process-inner o core)))))
 
 (def op-lookup
   "A map. For converting operators as string to a corresponding symbol of Clojure.
@@ -81,7 +79,7 @@ is applied, resulting
    "<" '<})
 
 (def do-opr
-"A function that evaluate operator expression.
+  "A function that evaluate operator expression.
 If input is 1 arg, return it as is.
 If input is 3 args of the form
     a [_ op] b
@@ -90,8 +88,7 @@ transform it to the form
 such that it becomes a valid Clojure expression."
   (fn
     ([x] x)
-    ([a [_ op] b] `(~(op-lookup  op) ~a ~b))
-    ))
+    ([a [_ op] b] `(~(op-lookup  op) ~a ~b))))
 
 (def regexlit
   #"#(_+|/+|\|+){1}+(.+?)\1{1}?")
@@ -334,7 +331,7 @@ such that it becomes a valid Clojure expression."
   StringLit = #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
 
   Operator = Op1 | Op2 | Op3 | Op4 | Op5 | Op6 | Op7 | Op8 | Op9 | Op10;
-  ") )
+  "))
 
 (def line-parser
   "Returns a parser that starts with grammar rule `Line'. This parser will return a parse tree even if the input isn't valid. The error will be embedded in part of parse tree."
@@ -347,9 +344,7 @@ such that it becomes a valid Clojure expression."
   Keys are keywords, values are functions.
   This is called like this:
   (instaparse.core/transform xform-rules parsetree)"
-  {
-
-   :Lines (fn [& x] x)
+  {:Lines (fn [& x] x)
 
    :Line (fn [& x] (first  x))
 
@@ -358,8 +353,8 @@ such that it becomes a valid Clojure expression."
    :Number (fn
              ([x] (read-string x))
              ([x [_ qual]]
-                (let [x (read-string x)]
-                  (* x (get multipliers qual)))))
+              (let [x (read-string x)]
+                (* x (get multipliers qual)))))
 
    :GetExpression (fn [a & b] `(~'-> ~a ~@(map (fn [z] `(~'get ~z)) b)))
 
@@ -386,11 +381,10 @@ such that it becomes a valid Clojure expression."
    :SINK (fn [name expression]
            (let [name (symbol name)
                  res `(~'def ~name
-                        (do
-                          (visi.core.runtime/do-sink (quote  ~name) ~expression)
-                          ~expression))]
-             (insert-meta res)
-             ))
+                             (do
+                               (visi.core.runtime/do-sink (quote  ~name) ~expression)
+                               ~expression))]
+             (insert-meta res)))
 
    :Source (fn
              ([x] `(visi.core.runtime/source ~x))
@@ -399,14 +393,14 @@ such that it becomes a valid Clojure expression."
    :MergeExpr (fn [core & others] `(~'merge ~core ~@others))
 
    :FunctionExpr1 (fn [& all]
-                   (let [vars (drop-last all)
-                         expr (last all)]
-                     `(~'fn [~@vars] ~expr)))
+                    (let [vars (drop-last all)
+                          expr (last all)]
+                      `(~'fn [~@vars] ~expr)))
 
    :DotFuncExpr (fn [x] `(~'fn [~'it]
-                          (if (clojure.core/map? ~'it)
-                            (clojure.core/get ~'it ~(keyword x))
-                            (~(symbol (str "." x)) ~'it))))
+                               (if (clojure.core/map? ~'it)
+                                 (clojure.core/get ~'it ~(keyword x))
+                                 (~(symbol (str "." x)) ~'it))))
 
    :PipeExpression (fn [root & pipeline]
                      (let [x `x#]
@@ -420,34 +414,34 @@ such that it becomes a valid Clojure expression."
    :Pipe2FunctionExpression (fn [& pipeline]
                               (let [x `x#
                                     y `y#]
-                               `(fn [~y] (~'as-> ~y ~x
-                                           ~@(map (fn[z] `(~z ~y))
-                                                  pipeline)))))
+                                `(fn [~y] (~'as-> ~y ~x
+                                                  ~@(map (fn [z] `(~z ~y))
+                                                         pipeline)))))
 
    :EmptyLine (fn [& _] nil)
 
-   :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x )))
+   :Mapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-map ~inside ~x)))
 
    :Foldcommand (fn
                   ([x]
-                     (fn [inside] `(~'visi.core.runtime/v-fold ~inside {} ~x)))
+                   (fn [inside] `(~'visi.core.runtime/v-fold ~inside {} ~x)))
                   ([x y]
-                     (fn [inside] `(~'visi.core.runtime/v-fold ~inside ~x ~y))))
+                   (fn [inside] `(~'visi.core.runtime/v-fold ~inside ~x ~y))))
 
    :Reducecommand (fn
-                  ([x]
-                   (fn [inside] `(~'visi.core.runtime/v- ~inside ~x))))
+                    ([x]
+                     (fn [inside] `(~'visi.core.runtime/v- ~inside ~x))))
 
 
-   :Flatmapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-flat-map ~inside ~x )))
+   :Flatmapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-flat-map ~inside ~x)))
 
-   :Filtercommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-filter ~inside ~x )))
+   :Filtercommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-filter ~inside ~x)))
 
-   :Groupbycommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-group-by ~inside ~x )))
+   :Groupbycommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-group-by ~inside ~x)))
 
    :Sortcommand (fn
                   ([x] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x true)))
-                  ([x order] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x (= order 'ascending')))))
+                  ([x order] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x ~order))))
 
    :StringLit (fn [x] (let [c (count x)]
                         (-> x
@@ -464,8 +458,7 @@ such that it becomes a valid Clojure expression."
                 rest
                 rest
                 first
-                java.util.regex.Pattern/compile)
-               )
+                java.util.regex.Pattern/compile))
 
    :Keyword keyword
    :DottedThing keyword
@@ -476,7 +469,7 @@ such that it becomes a valid Clojure expression."
 
    ;; :VectorExpr (fn [& x] `(-> (list ~@x) vec)) ;; better to have a vector literal, but the analyzer barfs on vector lits
    :VectorExpr (fn [& x] `[~@x]) ;; better to have a vector literal, but the analyzer barfs on vector lits
-
+   
    :SetExpr (fn [& x] `#{~@x})
 
    :InlineFunc (fn [& x] (process-inner (drop-last x) (last x)))
@@ -504,8 +497,7 @@ such that it becomes a valid Clojure expression."
 
    :ConstDef1 (fn [a b]
                 (let [res `(~'def ~a ~b)]
-                  (insert-meta res)
-                  ))
+                  (insert-meta res)))
 
    :Pipe2Expression (fn [nub & others]
                       (let [x `x#]
@@ -530,48 +522,44 @@ such that it becomes a valid Clojure expression."
 
    :Partial3 (fn [x v]
                (let [x2 `x#]
-                 `(~'fn [~x2] (~(-> x second second op-lookup) ~x2 ~v ))))
+                 `(~'fn [~x2] (~(-> x second second op-lookup) ~x2 ~v))))
 
    :Namespace (fn [ns & x]
                 (let [ret
                       `(do
                          (~'ns ~ns (:require [cemerick.pomegranate]))
                          ~@(mapcat
-                             (fn [z]
-                               (when (= :Load (first z))
-                                 (map
-                                   (fn [q]
-                                     `(cemerick.pomegranate/add-dependencies
-                                        :coordinates '[~q]
-                                        :repositories (merge cemerick.pomegranate.aether/maven-central
-                                                             {"clojars" "http://clojars.org/repo"})))
-                                   (rest z))
-                                 )) x
-                             )
+                            (fn [z]
+                              (when (= :Load (first z))
+                                (map
+                                 (fn [q]
+                                   `(cemerick.pomegranate/add-dependencies
+                                     :coordinates '[~q]
+                                     :repositories (merge cemerick.pomegranate.aether/maven-central
+                                                          {"clojars" "http://clojars.org/repo"})))
+                                 (rest z)))) x)
 
                          ~@(mapcat
-                             (fn [z]
-                               (when (= :Import (first z))
-                                 (map
-                                   (fn [q]
-                                     `(~'clojure.core/import ~q))
-                                   (rest z))))
-                             x)
+                            (fn [z]
+                              (when (= :Import (first z))
+                                (map
+                                 (fn [q]
+                                   `(~'clojure.core/import ~q))
+                                 (rest z))))
+                            x)
 
                          ~@(mapcat
-                             (fn [z]
-                               (when (= :Requires (first z))
-                                 (map
-                                   (fn [q]
-                                     `(~'clojure.core/require ~q))
-                                   (rest z))))
-                             x)
-                         )]
-                  (with-meta ret {:dont-fix true :source `(quote ret)})
-                  ))
+                            (fn [z]
+                              (when (= :Requires (first z))
+                                (map
+                                 (fn [q]
+                                   `(~'clojure.core/require ~q))
+                                 (rest z))))
+                            x))]
+                  (with-meta ret {:dont-fix true :source `(quote ret)})))
 
    ;; :Import (fn [& x] `(:import ~@x))
-
+   
    :NamespaceName symbol
 
    :Loadable (fn [x y] `[~x ~y])
@@ -580,14 +568,13 @@ such that it becomes a valid Clojure expression."
    :EXPRESSION2 identity
    :EXPRESSION3 identity
    :IDENTIFIER (fn [x] (cond
-         (= "nil" x) nil
-         (= "true" x) true
-         (= "false" x) false
-          :else
-         (-> x (.replace "$-" "-") (.replace "$." ".") symbol)))
+                         (= "nil" x) nil
+                         (= "true" x) true
+                         (= "false" x) false
+                         :else
+                         (-> x (.replace "$-" "-") (.replace "$." ".") symbol)))
    :ClojureSymbol symbol
-   :FullSymbol symbol
-   })
+   :FullSymbol symbol})
 
 ;; something that is maybe a class that's not found
 ;; might very well be a method invocation, so we'll treat it
@@ -596,9 +583,9 @@ such that it becomes a valid Clojure expression."
   [x opts]
   (let [ret (:form x)]
     (if (or
-          (namespace ret)
-          (not (re-matches #"[a-zA-Z_$][a-zA-Z\d_$]*" (name ret)))
-          (-> ret name (thread-it (<= 1 (.indexOf it ".")))))
+         (namespace ret)
+         (not (re-matches #"[a-zA-Z_$][a-zA-Z\d_$]*" (name ret)))
+         (-> ret name (thread-it (<= 1 (.indexOf it ".")))))
       ret
       (->> (str "." ret) symbol))))
 
@@ -609,41 +596,39 @@ into method invocations. So, toString(33) becomes
 (.toString 33) rather than (toString 33)"
   [code namespace opts]
   (if (or
-        (-> code meta :dont-fix)
-        (and
-         (seq? code)
-         (= 'ns (first code))))
+       (-> code meta :dont-fix)
+       (and
+        (seq? code)
+        (= 'ns (first code))))
     {:failed false :res code}
     (clojure.main/with-bindings
-      (in-ns (.name namespace))
-      (vu/fix-namespace)
-      (try
-        (->
-          code
-          (ca/analyze
-            (assoc
-              (ca/empty-env)
-              :locals
-              (->> opts
-                   :locals
-                   (map (fn [x]
-                          [(-> x name symbol)
-                           (if (clojure.core/namespace x)
-                             {:op :def :name x :var x :children []}
-                             {:op :binding :name x :form x
-                              :local :let})]))
-                   (into {})))
-            {:passes-opts
-             {:validate/unresolvable-symbol-handler
-              (fn [_ _ c]
-                (assoc c :op :maybe-method))
-              }})
-          (e/emit-form (or (:emit opts) {:qualified-symbols true :hygienic true}))
-          (thread-it {:failed false :res it}))
-        (catch Exception _
-          {:failed false :res code})                     ;; if we get an exception, just punt
-        )))
-  )
+     (in-ns (.name namespace))
+     (vu/fix-namespace)
+     (try
+       (->
+        code
+        (ca/analyze
+         (assoc
+          (ca/empty-env)
+          :locals
+          (->> opts
+               :locals
+               (map (fn [x]
+                      [(-> x name symbol)
+                       (if (clojure.core/namespace x)
+                         {:op :def :name x :var x :children []}
+                         {:op :binding :name x :form x
+                          :local :let})]))
+               (into {})))
+         {:passes-opts
+          {:validate/unresolvable-symbol-handler
+           (fn [_ _ c]
+             (assoc c :op :maybe-method))}})
+        (e/emit-form (or (:emit opts) {:qualified-symbols true :hygienic true}))
+        (thread-it {:failed false :res it}))
+       (catch Exception _
+         {:failed false :res code});; if we get an exception, just punt
+))))
 
 (defn split-into-lines
   "Split the String into a series of lines grouped by lines that have a leading none-space 1st char"
@@ -661,19 +646,14 @@ into method invocations. So, toString(33) becomes
                (do  (swap! acc conj ln) nil)
                (let [ret @acc]
                  (reset! acc [ln])
-                 [ret]
-                 )
-               )
-             ))
+                 [ret]))))
          lines)
 
-        split (conj (vec mostly-split) @acc)
-        ]
-    (map #(as-> % z (clojure.string/join "\n" z) (str z "\n") ) split)
-    ))
+        split (conj (vec mostly-split) @acc)]
+    (map #(as-> % z (clojure.string/join "\n" z) (str z "\n")) split)))
 
 (defn post-process
-"(post-process parse-tree)
+  "(post-process parse-tree)
  (post-process parse-tree namespace)
 Transform parse-tree into Clojure form, returns a map.
 parse-tree is Instaparse's parse tree.
@@ -683,18 +663,17 @@ else, return
  {:failed false :res transform-result}
 transform-result is Clojure form, e.g. `(def x 4)
 "
-([parse-tree namespace opts]
- (let [do-fix-calls
-       (fn [x]
-         (if (:dont-fix opts)
-           {:failed false :res  x}
-           (fixup-method-calls x namespace opts)))]
-   (if (instance? instaparse.gll.Failure parse-tree)
-     {:failed true :error parse-tree}
-     (->
-      (insta/transform xform-rules parse-tree)
-      do-fix-calls)
-     ))))
+  ([parse-tree namespace opts]
+   (let [do-fix-calls
+         (fn [x]
+           (if (:dont-fix opts)
+             {:failed false :res  x}
+             (fixup-method-calls x namespace opts)))]
+     (if (instance? instaparse.gll.Failure parse-tree)
+       {:failed true :error parse-tree}
+       (->
+        (insta/transform xform-rules parse-tree)
+        do-fix-calls)))))
 
 (defn- remove-hygene
   "Removes some of the hygenic symbols... makes for stables tests"
@@ -706,8 +685,7 @@ transform-result is Clojure form, e.g. `(def x 4)
      (symbol? x)
      (re-seq  #"__\d+__auto__$" (str x)))
     (symbol (clojure.string/replace (str x)  #"__\d+__auto__$"  ""))
-    :else x)
-  )
+    :else x))
 
 (defn parse-line
   "Parse 1 line of visi code.
@@ -721,8 +699,8 @@ else, return
  {:failed false, :res parse-result}"
   ([the-line] (parse-line the-line *ns* {}))
   ([the-line namespace opts]
-    (binding [*current-line* the-line]
-      (-> the-line .trim (str "\n") line-parser (post-process namespace opts)))))
+   (binding [*current-line* the-line]
+     (-> the-line .trim (str "\n") line-parser (post-process namespace opts)))))
 
 (defn parse-multiline
   "Parse all of the visi code
@@ -743,11 +721,8 @@ else, return
       (map line-parser)
       (map #(let [answer (post-process % namespace (merge opts {:locals @names}))]
               (when (some-> answer :res first (= 'def))
-                (swap! names conj (-> answer :res second))
-                )
-              answer
-              ))
-      ))))
+                (swap! names conj (-> answer :res second)))
+              answer))))))
 
 
 (defn parse-for-tests
@@ -775,14 +750,13 @@ For example, \"(+ 3 7)\" returns \"(+ 3 7)\".
 
   (let [code (.trim code)]
     (if
-        (and (< 0 (count code))
-             (not (#{"(" "{" "["} (.substring code 0 1))))
+     (and (< 0 (count code))
+          (not (#{"(" "{" "["} (.substring code 0 1))))
       (let [res (parse-line code)]
         (if (:res res)
           (-> res :res pr-str)
           code))
-      code)
-    ))
+      code)))
 
 (defn notebook-to-strings
   "Takes a single String blob in the Gorilla Notebook format and
@@ -804,8 +778,7 @@ converts it into a Vector of individual lines"
           info))) {:in false :lines []})
    :lines
    (mapv #(->> % (clojure.string/join "\n") .trim))
-   (filterv #(not (= 0 (count %))))
-   ))
+   (filterv #(not (= 0 (count %))))))
 
 ;; TODO this function is not called anywhere
 (defn process-notebook

@@ -78,13 +78,12 @@
 
     (doseq [[key value] (.getMappings *ns*)]
       (let [kn (str key)
-            repl (.replace kn "-" "_" )
+            repl (.replace kn "-" "_")
             matches (re-matches #"[a-zA-Z_$][a-zA-Z\d_$]+" repl)
             symd (symbol repl)
-            found (get (.getMappings *ns*) symd)
-            ]
+            found (get (.getMappings *ns*) symd)]
         (when (and
-                (not= kn repl)
-                matches
-                (not found))
+               (not= kn repl)
+               matches
+               (not found))
           (.refer *ns* symd value))))))
