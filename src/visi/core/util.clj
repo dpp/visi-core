@@ -97,6 +97,6 @@
   [value]
   (cond
     (string? value) (decode-base64 (.getBytes value "UTF-8"))
-    (bytes? value) (b64/decode value)
+    (bytes? value) (String. (b64/decode value) "UTF-8")
     :else (decode-base64 (pr-str value)))
   )

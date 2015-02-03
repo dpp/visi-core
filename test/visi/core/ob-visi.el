@@ -14,8 +14,6 @@
 
 (eval-when-compile (require 'cl))
 
-;; org-man-source-highlight-langs
-
 (declare-function nrepl-dict-get "ext:nrepl-client" (dict key))
 (declare-function nrepl-sync-request:eval "ext:nrepl-client" (input &optional ns session))
 
@@ -33,118 +31,38 @@
 	  (const :tag "cider" cider)
 	  ))
 
-(defun org-babel-expand-body:visi (φbody φparams)
+(defun org-babel-expand-body:visi (body params)
   "Expand BODY according to PARAMS, return the expanded body.
 ."
-  (org-babel-expand-body:generic φbody φparams))
+  ;; todo. May need real thing here.
+  (org-babel-expand-body:generic body params))
 
-;; (org-babel-expand-body:generic
-;;  "y + x + 4"
-;;  '(
-;;   (:var . ("x" . 7)) ; testing. no effect
-;;   (:var . ('x . 7))  ; testing. no effect
-;;   (:var . ('x 7))  ; testing. no effect
-;;   (:var . ("x" 7))  ; testing. no effect
-;;   (:comments . "")
-;;   (:shebang . "")
-;;   (:cache . "no")
-;;   (:padline . "")
-;;   (:noweb . "no")
-;;   (:tangle . "no")
-;;   (:exports . "both")
-;;   (:results . "replace value")
-;;   (:session . "none")
-;;   (:hlines . "no")
-;;   (:result-type . value)
-;;   (:result-params "value" "replace")
-;;   (:rowname-names)
-;;   (:colname-names))
-;;  ) ;;  "x + y + 4"
-
-;; (org-babel-expand-body:visi
-;;  "y + x + 4"
-;;  '(
-;;   (:var . ("x" . 7)) ; testing. no effect
-;;   (:var . ('x . 8))  ; testing. no effect
-;;   (:var . ('x 9))  ; testing. no effect
-;;   (:var . ("x" 10))  ; testing. no effect
-;;   (:comments . "")
-;;   (:shebang . "")
-;;   (:cache . "no")
-;;   (:padline . "")
-;;   (:noweb . "no")
-;;   (:tangle . "no")
-;;   (:exports . "both")
-;;   (:results . "replace value")
-;;   (:session . "none")
-;;   (:hlines . "no")
-;;   (:result-type . value)
-;;   (:result-params "value" "replace")
-;;   (:rowname-names)
-;;   (:colname-names))
-;;  )
-
-;; "(let [\"x\" (quote 7)
-;;       (quote x) (quote 8)
-;;       (quote x) (quote (9))
-;;       \"x\" (quote (10))]
-;; y + x + 4)"
-
-;; sample org babel  φob-params format
-;; '(
-;;   (:comments . "")
-;;   (:shebang . "")
-;;   (:cache . "no")
-;;   (:padline . "")
-;;   (:noweb . "no")
-;;   (:tangle . "no")
-;;   (:exports . "both")
-;;   (:results . "replace value")
-;;   (:session . "none")
-;;   (:hlines . "no")
-;;   (:result-type . value)
-;;   (:result-params "value" "replace")
-;;   (:rowname-names)
-;;   (:colname-names))
-
-;; ;; sample nrepl-dict-get call
-;; (nrepl-dict-get (nrepl-sync-request:eval "(+ 3 4)") "out") ; nil
-;; (nrepl-dict-get (nrepl-sync-request:eval "(+ 3 4)") "value") ; 7
-
-;; (format "(visi.core.parser/parse-and-eval-for-tests \"%s\")" "3 + 4") ; "(visi.core.parser/parse-and-eval-for-tests \"3 + 4\")"
-
-(defun org-babel-execute:visi (φvisi-code φob-params)
+(defun org-babel-execute:visi (visi-code ob-params)
   "Execute a block of Visi code with Babel."
-
   (let* (
-         (ξquoted-visi-code (replace-regexp-in-string "\"" "\\\"" φvisi-code "FIXEDCASE" "LITERAL"))
-         (ξexpanded-visi-code (org-babel-expand-body:visi ξquoted-visi-code φob-params))
-         (ξclojureCode (format "(visi.core.parser/parse-and-eval-multiline \"%s\")" ξexpanded-visi-code))
-         (ξresultParams (cdr (assoc :result-params φob-params)))
-         ξresult)
-
-    (message "raw input: 「%s」" φvisi-code)
-    (message "quoted: 「%s」" ξquoted-visi-code)
-    (message "expanded: 「%s」" ξexpanded-visi-code)
-    (message "clojure code: 「%s」" ξclojureCode)
-    (message "“:result-params” value: 「%s」" ξresultParams)
+         ;; (quoted-visi-code (replace-regexp-in-string "\"" "\\\"" visi-code "FIXEDCASE" "LITERAL"))
+         (expanded-visi-code (org-babel-expand-body:visi visi-code ob-params))
+         (clojureCode 
+          (format 
+           "(visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\"))"
+           (base64-encode-string expanded-visi-code t)))
+         (resultParams (cdr (assoc :result-params ob-params)))
+         result)
 
     (progn
       (require 'cider)
-      (setq ξresult
+      (setq result
             (nrepl-dict-get
-             (nrepl-sync-request:eval ξclojureCode)
-             (if (or (member "output" ξresultParams)
-                     (member "pp" ξresultParams))
+             (nrepl-sync-request:eval clojureCode)
+             (if (or (member "output" resultParams)
+                     (member "pp" resultParams))
                  "out"
                "value"))))
 
-    (org-babel-result-cond ξresultParams
-      ξresult
-      (condition-case nil (org-babel-script-escape ξresult)
-	(error ξresult)))))
-
-(message "----------------ob-visi.el loaded")
+    (org-babel-result-cond resultParams
+      result
+      (condition-case nil (org-babel-script-escape result)
+	(error result)))))
 
 (provide 'ob-visi)
 
