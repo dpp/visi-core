@@ -370,7 +370,7 @@
   (if-let [{:keys [segmentID code] :as msg}
            (or;; FIXME v-mid/current-message
 ;; clojure.tools.nrepl.middleware.interruptible-eval/*msg* ;; FIXME
-)]    
+)]
     (when segmentID
       (swap! info assoc segmentID (dissoc msg :transport)))))
 
@@ -391,7 +391,7 @@
 (defn- recompute
   [info]
   (let [segments (-> info deref vals vec);; FIXME runner (inte/interruptible-eval nil)
-]    
+]
     (reset! info {})
     (future
       (dorun
@@ -408,7 +408,7 @@
                          (assoc resp :segmentID (:segmentID msg)
                                 :clear "true")))
                       this))];; FIXME (runner (assoc msg :transport transport))
-))        
+))
 
         segments)))))
 
@@ -477,7 +477,7 @@
 
 (defmulti build-rdd-from-url (fn [x _] :default))
 
-(defmacro source
+(defmacro visi-source
   [var-name url]
   `(~'def ~(symbol var-name) (build-rdd-from-url (~'visi.core.runtime/spark-context) ~url)))
 
@@ -496,39 +496,6 @@
 
 (defn starts-with [^String s ^String s2] (.startsWith s s2))
 
-;; (defn twitter-config-builder
-;;   []
-;;   (->  (twitter4j.conf.ConfigurationBuilder.)
-;;        (.setDebugEnabled true)
-;;        (.setOAuthConsumerKey "Ctv9xKyG815ScJGzMVVuQw")
-;;        (.setOAuthConsumerSecret "INIulEJfsyWSLzFf9u9p4OxqJos9SdmTcoFIMeqJqaA")
-;;        (.setOAuthAccessToken "3930521-s9UEBKa8pzWiptCCyrneraZVAxW6DqYL3ieftVYhMo")
-;;        (.setOAuthAccessTokenSecret "iHfLYzG1awJEpoZ9hZJBc4hngTwRPqYtuJDezqMPcr0")))
-
-;; (defn twitter-factory
-;;   []
-;;   (twitter4j.TwitterFactory. (.build (twitter-config-builder))))
-
-;; (defn twitter-instance [] (.getInstance (twitter-factory)))
-
-;; (defn twitter-authorization [] (.getAuthorization (twitter-instance)))
-
-
-;; (defn streaming-context
-;;   ([] (streaming-context 120000))
-;;   ([duration]
-;;      (let [duration
-;;            (if (number? duration)
-;;              (org.apache.spark.streaming.Duration. duration)
-;;              duration)]
-;;        (org.apache.spark.streaming.api.java.JavaStreamingContext.
-;;         (spark-context)
-;;         duration))))
-
-
-(defmulti create-twitter-stream identity)
-
-(defmulti create-mqtt-stream identity)
 
 (defn stream-into-watching
   "Put the Stream into a watching var"
@@ -662,9 +629,25 @@
 (def triml clojure.string/triml)
 (def trimr clojure.string/trimr)
 (def upper_case clojure.string/upper-case)
+(def xform clojure.core/map)
+(def xform_flat clojure.core/mapcat)
+
+(defmulti as-string class)
+
+(defmethod as-string Object
+  [x]
+  (pr-str x))
+
+(defmethod as-string java.util.List
+  [x]
+  (str "[" (join ", " (map as-string x)) "]"))
+
+(defmethod as-string java.util.Map
+  [x]
+  (str "{" (join ", " (map (fn [[k v]] (str (as-string k) " "
+                                            (as-string v))) x)) "}"))
 
 
-
-
-
-
+(defmethod as-string String
+  [x]
+  (str "Moooooooo " x))

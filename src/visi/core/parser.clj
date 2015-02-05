@@ -149,8 +149,8 @@ such that it becomes a valid Clojure expression."
 
   IDENTIFIER = #'(?:\\$\\.)?[a-zA-Z](?:[a-zA-Z0-9_\\?]|\\$-)*';
 
-  ClojureSymbol = <'`'> (#'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
-  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*') ;
+  ClojureSymbol = (<'`'> (#'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
+  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*')) / #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)::[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' ;
 
   BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
@@ -387,8 +387,8 @@ such that it becomes a valid Clojure expression."
              (insert-meta res)))
 
    :Source (fn
-             ([x] `(visi.core.runtime/source ~x))
-             ([x v] `(visi.core.runtime/source ~x ~v)))
+             ([x] `(visi.core.runtime/visi-source ~x))
+             ([x v] `(visi.core.runtime/visi-source ~x ~v)))
 
    :MergeExpr (fn [core & others] `(~'merge ~core ~@others))
 
@@ -415,7 +415,7 @@ such that it becomes a valid Clojure expression."
                               (let [x `x#
                                     y `y#]
                                 `(fn [~y] (~'as-> ~y ~x
-                                                  ~@(map (fn [z] `(~z ~y))
+                                                  ~@(map (fn [z] `(~z ~x))
                                                          pipeline)))))
 
    :EmptyLine (fn [& _] nil)
@@ -430,7 +430,7 @@ such that it becomes a valid Clojure expression."
 
    :Reducecommand (fn
                     ([x]
-                     (fn [inside] `(~'visi.core.runtime/v- ~inside ~x))))
+                     (fn [inside] `(~'visi.core.runtime/v-reduce ~inside ~x))))
 
 
    :Flatmapcommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-flat-map ~inside ~x)))
@@ -573,7 +573,7 @@ such that it becomes a valid Clojure expression."
                          (= "false" x) false
                          :else
                          (-> x (.replace "$-" "-") (.replace "$." ".") symbol)))
-   :ClojureSymbol symbol
+   :ClojureSymbol (fn [x] (-> x (.replace "::" "/") symbol))
    :FullSymbol symbol})
 
 ;; something that is maybe a class that's not found
@@ -702,6 +702,11 @@ else, return
    (binding [*current-line* the-line]
      (-> the-line .trim (str "\n") line-parser (post-process namespace opts)))))
 
+(defn- pass-seq
+  "Passes a seq, otherwise nil"
+  [x]
+  (if (seq? x) x nil))
+
 (defn parse-multiline
   "Parse all of the visi code
   Arguments: the-line, namespace
@@ -720,7 +725,7 @@ else, return
       split-into-lines
       (map line-parser)
       (map #(let [answer (post-process % namespace (merge opts {:locals @names}))]
-              (when (some-> answer :res first (= 'def))
+              (when (some-> answer :res pass-seq first (= 'def))
                 (swap! names conj (-> answer :res second)))
               answer))))))
 

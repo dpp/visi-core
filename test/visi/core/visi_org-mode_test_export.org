@@ -66,7 +66,7 @@ Or, export to HTML with code and result by 【C-c C-e h h】
 #+END_SRC
 
 #+RESULTS:
-: aabb
+: "aabb"
 
 #+BEGIN_SRC visi :results value :exports both
   x = 7
@@ -81,7 +81,7 @@ Or, export to HTML with code and result by 【C-c C-e h h】
 #+END_SRC
 
 #+RESULTS:
-| x | 3 | a | 7 | b | 2 | c | 9 |
+: {"x" 3, "a" 7, "b" 2, "c" 9}
 
 #+BEGIN_SRC visi :results value :exports both
  re$-matches( #/a.+/, "abc") ## "abc"
@@ -122,4 +122,3 @@ Or, export to HTML with code and result by 【C-c C-e h h】
 
 #+RESULTS:
 : 20000N
-

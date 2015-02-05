@@ -18,7 +18,7 @@ code and returns a value:
  1 + 1
 #+END_SRC
 
-That's simple, the expression evaluates to 2. Yay!
+That's simple, the expression evaluates to src_visi{1 + 1}. Yay!
 
 In Excel, each cell is a variable... something that can contain
 a value. In Excel, cells can be constants (values that do not change)
@@ -37,21 +37,58 @@ y = x + 5
 
 #+END_SRC
 
+
 The above code created variables named "x" and "y". "x" is a constant
 and "y" is dependent on "x".
 
 In Visi and Excel, you can apply a function to a value:
 
-#+BEGIN_SRC visi
+#+NAME: sin
+#+BEGIN_SRC visi :exports both
 
-`Math/sin(0.5)
+Math::sin(0.5)
 
 #+END_SRC
 
-In Visi, functions exist in separate packages so that it's easier
+Computes to:
+
+#+RESULTS: sin
+: 0.479425538604203
+
+
+In Excel, there are lots and lots of different functions. They are
+all in the same group, although the user interface (Insert Function)
+lets you pick
+functions from categories like "Statistical" or "Financial".
+
+In Visi, functions are grouped in separate packages so that it's easier
 to find a function you're looking for and sometimes, like in the
 above example, we have to be explicit about which package the
-function lives in.
+function lives in. The =::= between =Math= and =sin= tells Visi
+to look in the =Math= package for the function.
+
+With Visi, you can use any Java package as part of your Visi notebook.
+We will cover Java "Host Interoperability" and how to load Java JAR
+files into your Visi notebook later in this document.
+
+A declaration is the association of a value with a name
+such that the named declaration (variable) can be accessed
+by other parts of your notebook. For example:
+
+#+NAME: cos_third_pi
+#+BEGIN_SRC visi :export both
+
+Math::cos(Math::PI / 3) ## expression
+
+cos_third_pi = Math::cos(Math::PI / 3) ## declaration
+
+cos_third_pi ## referencing the variable
+
+#+END_SRC
+
+#+RESULTS: cos_third_pi
+: (0.5000000000000001 0.5000000000000001)
+
 
 In Visi, you can create your own functions. So you can use
 the same logic in many places without having to copy/paste that logic
@@ -62,6 +99,8 @@ over and over:
 calc_tax(income) = income * if(income > 5000, 40%, 20%)
 
 #+END_SRC
+
+The above function computes the tax amount depending on the income level.
 
 And functions can call other functions:
 
@@ -103,39 +142,99 @@ calc_tax(income) = income * tax_rate(income)
 
 #+END_SRC
 
+To summarize, Visi syntax is a lot like Excel syntax, but
+there are extensions to what you are familiar with in Excel to
+make writing more complex Visi notebooks easier.
+
+** Core Concepts
+
 In Visi, there are three constructs: expressions, declarations,
 and housekeeping.
 
 An expression is a value that's computed.
 Expressions can evaluate to either values or functions. Or
 more precisely, functions are values just like numbers and
-strings.
+strings and collections.
 
-A declaration is the association of a value with a name
-such that the named declaration (variable) can be accessed
-by other parts of your program. For example:
+What's a collection? It's a group of other values. For example:
 
 #+BEGIN_SRC visi
-
-`Math/cos(Math/PI / 3) ## expression
-
-cos_third_pi = `Math/cos(Math/PI / 3) ## declaration
-
+[1, 2, 3, 4]
 #+END_SRC
 
-Note that declaration of a function is just fancy syntax, both of
+Is a collection of numbers. The specific collection type is
+called a =Vector=. It's a 1 dimensional ordered array of values.
+Ordered means that the Vector retains the elements in the
+order that it was originally created
+
+Visi also supports sets. Sets are unordered collections
+that contain unique values. So:
+
+#+NAME: a-set
+#+BEGIN_SRC visi :exports both
+#{"foo", "bar", "baz", "foo", "dog", "dog", "baz"}
+#+END_SRC
+
+Only contains 4 elements:
+
+#+RESULTS: a-set
+: #{"foo" "bar" "dog" "baz"}
+
+Another collection is a map. A map is an association
+between unique keys and values. Both the keys and values
+can be any Visi value. Let's create a map of people and
+ages:
+
+#+BEGIN_SRC visi
+{"David" 51, "Archer" 11, "Tessa" 2}
+#+END_SRC
+
+#+RESULTS:
+: {"Archer" 11, "Cat" 2, "David" 51}
+
+Note that like sets, the keys are unordered.
+
+If you are familiar with [[http://en.wikipedia.org/wiki/JavaScript][JavaScript]],
+maps in Visi are like Objects in JavaScript... collections of
+key/value pairs.
+
+Visi also has a =keyword= type. Keywords are handy for
+giving a common/shared name to a value in a map. For example:
+
+#+BEGIN_SRC visi
+[{:name "David", :type "Human", :age 51},
+ {:name "Archer", :type "Dog", :age 11},
+ {:name "Tessa", :type "Cat", :age 2}]
+#+END_SRC
+
+#+RESULTS:
+: [{:age 51, :name "David", :type "Human"} {:age 11, :name "Archer", :type "Dog"} {:age 2, :name "Tessa", :type "Cat"}]
+
+In Visi, functions are values just like strings and numbers and
+keywords.
+The declaration of a function is just fancy syntax, both of
 the following declarations mean the same thing (don't worry about the
 function expression syntax for the moment):
 
-#+BEGIN_SRC visi
+#+NAME: plus_one
+#+BEGIN_SRC visi :exports both
 
 plus_one = x => x + 1
 
-plus_one(x) = x + 1
+another_plus_one(x) = x + 1
+
+z = 99
+
+plus_one(z) == another_plus_one(z)
 
 #+END_SRC
 
-The first example, assigns the expression "x => x + 1" to "plus_one". That
+Are the two functions the same?
+
+#+RESULTS: plus_one
+: true
+
+The first example, assigns the expression =x => x + 1= to =plus_one=. That
 expression evaluates to a function. The second example does the same thing
 with different syntax. The latter is "syntactic sugar" for the former.
 
@@ -149,7 +248,35 @@ functions as parameters in a little while.
 
 In Visi, top level variables (those variables defined outside
 another variable declaration) can be accessed by any expression
-in a Visi program/notebook, just like values in cells in Excel.
+in a Visi notebook, just like values in cells in Excel.
+
+*** But why functions?
+
+Functions take parameters and perform operations
+on the parameters and return a value.
+
+You're familiar with fom
+
+#+NAME: first-example
+#+BEGIN_SRC visi :export both
+
+
+residents = ## Who lives with us?
+ [{:name "David", :type "Human", :age 51},
+ {:name "Archer", :type "Dog", :age 11},
+ {:name "Tessa", :type "Cat", :age 2}]
+
+get_age(r) = get(r, :age)
+
+ages = ## Get the ages
+  map(get_age, residents)
+
+ages
+#+END_SRC
+
+#+RESULTS: first-example
+: (51 11 2)
+
 You can also declare variables that are only visible to expressions
 that come after the declaration in the expression. This allows
 you to compute an expression and use the result in many
@@ -158,10 +285,12 @@ places within a larger expression. For example:
 #+BEGIN_SRC visi
 
 test_income(income) =
-  mag = `Math/log10(income) ## the magnitude of the income
+  mag = Math::log10(income) ## the magnitude of the income
   if mag < 3 then "low"
   else if mag < 5 then "med"
   else "high"
+
+
 
 #+END_SRC
 

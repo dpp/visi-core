@@ -60,13 +60,13 @@
   (t/testing
    "Test Keyword"
   ;; keyword has the form 「:‹x›」. It is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
-    
+
     (t/is (= (vp/parse-for-tests ":x25707") :x25707))
     (t/is (= (vp/parse-for-tests ":p40689") :p40689)))
 
   (t/testing
    "Test StringLit." ; todo, test all the backslash special case
-    
+
     (t/is (= (vp/parse-for-tests "\"3\"") "3"))
     (t/is (=
            (vp/parse-for-tests "\"3\n4\"")
@@ -80,7 +80,7 @@
            '"3\t4"))
 
     (t/is (= (vp/parse-for-tests "\"😸\"") '"😸")); unicode beyond BMP
-)  
+)
 
   (t/testing
    "Test RegexLit"
@@ -174,7 +174,7 @@
   ;; (t/is (= (vp/parse-and-eval-for-tests "/* x\n\ny */ */ 3") 3)) ;embedded */
     (t/is (= (vp/parse-and-eval-for-tests "/* x\ny /* x\ny  */ */ 3") 3)); nested block comment
 ;
-)  
+)
 
   (t/testing
    "Test BlockExpression."
@@ -267,14 +267,14 @@ end")
   f(3)") ; line return also cause error
              '(let* [f (fn* ([x] (clojure.lang.Numbers/add x 1)))] (f 3))));
 ;
-))  
+))
 
   (t/testing
    "Test Source syntax"
 
     (t/is (=
            (vp/parse-for-tests "source x")
-           '(visi.core.runtime/source x)))
+           '(visi.core.runtime/visi-source x)))
 
     (t/is (=
            (vp/parse-for-tests "source xyz = \"https://example.com/x.txt\"")
@@ -310,7 +310,7 @@ end")
   ;; (get-parsetree "{:xx -> 3, :yy -> 4}")
   ;; (get-parsetree "{\"xx\" -> 3, \"yy\" -> 4}")
   ;; (get-parsetree "{.xx -> 3, .yy -> 4}")
-    
+
     (comment
       "Test Pair syntax"
    ;; Pair = (DottedThing / EXPRESSION) <'->'> EXPRESSION;
@@ -320,7 +320,7 @@ end")
         "Test DottedThing";; dotted thing has the form 「.x」.
 ;; When it is eval'd, it is interpreted as DotFuncExpr.
 ;; dotted thing cannot be by itself according to grammar spec. The only parent of dotted thing is Pair. So, test for pair instead.
-))    
+))
 
   ;; test extra spaces
     (t/is (=
@@ -343,7 +343,7 @@ end")
    ;; (-> x (get :y))
    ;; so, its semantics is clojure function 「get」
    ;; so, it means the FieldExpr is for getting item from visi map datatype
-      
+
       (t/is (= (vp/parse-for-tests "x .y" 'x)
                '(let* [it x]
                       (if (clojure.core/map? it)
@@ -367,7 +367,7 @@ end")
    ;; where ‹pair› has the form 「‹x› -> ‹y›」.
    ;; 「x %% y」 get transformed into 「(merge x y)」
    ;; note: the right hand side needs not be a clojure list. todo, find out exactly why or what.
-      
+
    ;; test syntactic validity
       (t/is (= (vp/parse-for-tests "x %% y" 'x 'y) '(merge x y)))
 
@@ -422,13 +422,13 @@ end")
            '#{x 3 y}))
 
     (t/is (= (vp/parse-and-eval-for-tests "#{4, 3, 7}") '#{7 3 4}));
-)  
+)
 
   (t/testing
    "Test FunctionExpr"
 
   ;; <FunctionExpr> = HashFunctionExpr / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
-    
+
     (t/testing
      "Test HashFunctionExpr"
    ;; has the form 「|> # ‹x›(‹body›)」, where the ‹body› can contain 「it」, 「it1」, 「it2」, 「it3」. This basically means a lambda function. The ‹x› is a Java static method name, and 「it」 「it1」 means first arg, 「it2」 means 2nd arg, 「it」 means 3rd arg.
@@ -439,33 +439,33 @@ end")
       (t/is (= (vp/parse-and-eval-for-tests "2 |> # `Math/pow(it, 3)") '8.0))
 
       (t/is (= (vp/parse-and-eval-for-tests "\"a\" |> # $.codePointAt(it,0)") '97));
-)    
+)
 
     (t/testing
      "Test PartialFunction"
    ;; 「| ‹FuncCall›」
-      
+
    ;; (get-transformed-result "| f(3,4)")
    ;; (partial f 3 4)
-      
+
    ;; (get-parsetree "subs(\"abcd\", 1 , 3)")
    ;; (get-transformed-result "subs(\"abcd\", 1 , 3)")
    ;; (get-evaled-result "subs(\"abcd\", 1 , 3)") ; bc
-      
+
    ;; (get-transformed-result "| subs(\"abcd\")")
    ;; (partial subs "abcd")
-      
+
       (t/is (=
              (vp/parse-and-eval-for-tests "1 |> | subs(\"abcd\")")
              '"bcd"));
-)    
+)
 
     (t/testing
      "Test FunctionExpr1"
    ;; function expression has this forms
    ;; ‹x› => ‹expr›
    ;; (‹x1›, ‹x2›, …) => ‹expr›
-      
+
       (t/is (= (vp/parse-for-tests "x => 4") '(fn* ([x] 4))))
       (t/is (= (vp/parse-for-tests "(x,y) => 4") '(fn* ([x y] 4))))
 
@@ -479,7 +479,7 @@ end")
       (t/is (= (vp/parse-and-eval-for-tests "f = (x,y) => x + y; f(3,4)") 7))
       (t/is (= (apply (vp/parse-and-eval-for-tests "x => x + 1") 3 '()) 4)) ; apply
       (t/is (= (vp/parse-and-eval-for-tests "apply((x) => x + 1, [4])") 5));
-)    
+)
 
     (t/testing
      "Test DotFuncExpr"
@@ -487,7 +487,7 @@ end")
    ;; 「.‹x›」 get turned into a function of 1 arg, named 「.‹x›」.
    ;; and 「.‹x›(‹y›, …)」 get turned into  「(.‹x› ‹y› …)」.
    ;; this means, if the ‹x› is a java method name, then it works.
-      
+
       (t/is
        (=
         (vp/parse-for-tests ".x")
@@ -504,7 +504,7 @@ end")
     (t/testing
      "Test Pipe2Expression"
    ;; 「‹expr› |> ‹FunctionExpr›」 can be chained.
-      
+
       (t/is (=
              (vp/parse-and-eval-for-tests "3 |> (x) => x + 1")
              '4))
@@ -512,7 +512,7 @@ end")
       (t/is (=
              (vp/parse-and-eval-for-tests "3 |> (x) => x + 1 |> (x) => x + 2")
              '6));;
-)    
+)
 
     (t/testing
      "Test PipeExpression"
@@ -526,19 +526,19 @@ end")
 
       (t/is (= (vp/parse-and-eval-for-tests "x = [\"CD\", \"AB\"]; x |> map .toLowerCase")
                '("cd" "ab")));; todo. PipeExpression also takes a ParenExpr in front. test that. In that form, it seems to take a function (because ParenExpr is a function)
-)    
+)
 
     (t/testing
      "Test PipeFunctionExpression"
    ;; has the form 「|> ‹pipecommands›」. e.g. 「|> map (+ 1)」 it creates a function of 1 arg, this 「‹pipecommands›(arg)」
-      
+
       (t/is (= (vp/parse-and-eval-for-tests "apply(|> map (+ 1), [[3,4,5]])")
                '(4 5 6))))
 
     (t/testing
      "Test PipeCommands"
    ;; all pipe commands's syntax must be part of PipeExpression or PipeFunctionExpression
-      
+
       (t/testing
        "Test Mapcommand"
         (t/is (= (vp/parse-and-eval-for-tests
@@ -557,10 +557,10 @@ end")
   ;; ② 「if ‹test› then ‹true body› else ‹else body›」
   ;; and a C-syntax
   ;; ③ 「(‹test› ? ‹true body› : ‹else body›)」
-    
+
   ;; todo, for forms ② and ③, the ‹else body› also allow (OprExpression / EXPRESSION). Not sure why, perhaps for some precedence?
   ;; note: there's no just “if then” without “else”
-    
+
   ;; test basic forms
     (t/is (=
            (vp/parse-for-tests "if( 3, 4, 5)")
@@ -573,7 +573,7 @@ end")
            (vp/parse-for-tests "3 ? 4 : 5")
            '(if 3 4 5)))
   ;; todo. add more test on extra space/newline variations in different places
-    
+
     (t/is (=
            (vp/parse-and-eval-for-tests "if( 3, 4, 5)")
            (vp/parse-and-eval-for-tests "if 3 then 4 else 5")
@@ -590,7 +590,7 @@ end")
   (t/testing
    "Test GetExpression"
   ;; has the form 「‹x›[‹y1›]」, 「‹x›[‹y1›][‹y2›]」, 「‹x›[‹y1›][‹y2›][‹y3›]」, …. It can be used on vector data type and map data type
-    
+
     (t/is (= (vp/parse-for-tests "x[2]" 'x)
              '(clojure.lang.RT/get x 2)))
 
@@ -609,47 +609,47 @@ end")
   ;; Partial2 has this form 「(‹expr› ‹operator›) 」
   ;; Partial3 has this form 「(‹operator› ‹expr›)」
   ;; 「(‹expr›)」
-    
+
   ;; here's the parse tree showing each form
-    
+
   ;; (get-parsetree "(+)")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial1 [:Operator [:Op3 "+"]]]]]]]
-    
+
   ;; (get-parsetree "(3+)")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial2 [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]] [:Operator [:Op3 "+"]]]]]]]
-    
+
   ;; (get-parsetree "(+3)")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:Partial3 [:Operator [:Op3 "+"]] [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]]]]]
-    
+
   ;; (get-parsetree "(3)")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]]]]
-    
+
   ;; here's their transformed result
   ;; (get-transformed-result "(+)")
   ;; '+
-    
+
   ;; (get-transformed-result "(3+)")
   ;; '(fn [x__36__auto__] (+ 3 x__36__auto__))
-    
+
   ;; (get-transformed-result "(+3)")
   ;; '(fn [x__37__auto__] (+ x__37__auto__ 3))
-    
+
   ;; (get-transformed-result "(3)")
   ;; '3
-    
+
   ;; the ParenExpr seems to serve 2 purposes.
   ;; ① when using paren to specify eval order
   ;; ② when in the form 「(‹expr› ‹operator›) 」 , it creates a function that behaves like 「‹expr› ‹operator› ‹arg›」.
   ;; Similarly,  when  in the form 「(‹operator› ‹expr›)」 , it creates a function that behaves like 「‹arg› ‹operator› ‹expr›」.
-    
+
   ;; here's example for eval order
-    
+
   ;; (get-parsetree "(3+2)")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]] [:Op3 "+"] [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "2"]]]]]]]]]]]]]]]]]]]]]
-    
+
   ;; (get-parsetree "(3+2)/4")
   ;; [:Line [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ParenExpr [:EXPRESSION [:EXPRESSION2 [:OprExpression [:Op10Exp [:Op9Exp [:Op8Exp [:Op7Exp [:Op6Exp [:Op5Exp [:Op4Exp [:Op3Exp [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "3"]]]]]] [:Op3 "+"] [:Op2Exp [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "2"]]]]]]]]]]]]]]]]]]]]] [:Op2 "/"] [:Op1Exp [:EXPRESSION [:EXPRESSION2 [:ConstExpr [:Number "4"]]]]]]]]]]]]]]]]]]
-    
+
     (t/is (= ((vp/parse-and-eval-for-tests "(+)") 3 4) 7))
 
     (t/is (= ((vp/parse-and-eval-for-tests "(3 +)") 4) 7))
@@ -657,7 +657,7 @@ end")
     (t/is (= ((vp/parse-and-eval-for-tests "(/ 3)") 4) 4/3))
 
     (t/is (= (vp/parse-and-eval-for-tests "(3)") 3));
-)  
+)
 
   (t/testing
    "Test InlineFunc"
@@ -665,16 +665,16 @@ end")
   ;; inline func has the form 「‹def›; ‹expr›」
   ;; where the ‹def› is either a constant definition such as 「x=3」 or function definition such as 「f(x) = x+1 」
   ;; inline func is part of grammar rule EXPRESSION
-    
+
   ;; (get-transformed-result "x = 3; x")
   ;; [:InlineFunc '(def x 3) 'x]
-    
+
   ;; (get-transformed-result "x = 3; y = 4; 5")
   ;; [:InlineFunc '(def x 3) [:InlineFunc '(def y 4) '5]]
-    
+
   ;; (get-transformed-result "f(x)=3; x")
   ;; [:InlineFunc '(defn f [x] 3) 'x]
-    
+
   ;; (get-parsetree "x = 3; x")
   ;; [:Line
   ;;  [:EXPRESSION
@@ -690,7 +690,7 @@ end")
   ;;     [:EXPRESSION
   ;;      [:EXPRESSION2
   ;;       [:IDENTIFIER "x"]]]]]]]
-    
+
   ;; (get-parsetree "f(x)=3; x")
   ;; [:Line
   ;;  [:EXPRESSION
@@ -706,7 +706,7 @@ end")
   ;;     [:EXPRESSION
   ;;      [:EXPRESSION2
   ;;       [:IDENTIFIER "x"]]]]]]]
-    
+
   ;; (get-parsetree "f(x)=3; f(4)")
   ;; [:Line
   ;;  [:EXPRESSION
@@ -727,7 +727,7 @@ end")
   ;;         [:EXPRESSION2
   ;;          [:ConstExpr
   ;;           [:Number "4"]]]]]]]]]]]
-    
+
     (t/is (= (vp/parse-for-tests "x = 3; x")
              '(let* [x 3] x)))
 
@@ -741,7 +741,7 @@ end")
    "Test ClojureSymbol"
 
   ;; ClojureSymbol is like IDENTIFIER. The diff is that identifier only allow alphanumerics, plus dash underline and question mark. But clojure symbol is intended to be clojure identifiers, including dot slash, and other allowed chars of clojure symbol.
-    
+
     (t/is (= (vp/parse-for-tests "x/y", 'x 'y)
              '(clojure.lang.Numbers/divide x y)))
 
@@ -755,14 +755,14 @@ end")
 
     (t/is (= (vp/parse-for-tests "x/y/z" 'x 'y 'z)
              '(clojure.lang.Numbers/divide x (clojure.lang.Numbers/divide y z)))) ; this becomes division
-    
+
     (t/is (= (vp/parse-for-tests "x / y / z/a" 'x 'y 'z 'a)
              '(clojure.lang.Numbers/divide
                x
                (clojure.lang.Numbers/divide
                 y
                 (clojure.lang.Numbers/divide z a))))) ; nested division
-    
+
     (t/is (= (vp/parse-for-tests "x/y(m)" 'x 'y 'm)
              '(clojure.lang.Numbers/divide x (y m))))
 
@@ -802,7 +802,7 @@ end")
   ;; the ‹x› is one of IDENTIFIER, Keyword, FunctionExpr.
   ;; sort command is part of pipecommands, meaning, it must be part of PipeExpression or PipeFunctionExpression, meaning, the syntax must have 「… |>」  or 「|>」 in front
   ;; like this「data |> sort func」
-  
+
   (t/is (=
          (vp/parse-and-eval-for-tests "x = [8, 3, 4]; x |> sort identity")
          (vp/parse-and-eval-for-tests "ff(aa) = identity(aa); x = [8, 3, 4]; x |> sort ff")

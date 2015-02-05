@@ -42,9 +42,9 @@
   (let* (
          ;; (quoted-visi-code (replace-regexp-in-string "\"" "\\\"" visi-code "FIXEDCASE" "LITERAL"))
          (expanded-visi-code (org-babel-expand-body:visi visi-code ob-params))
-         (clojureCode 
-          (format 
-           "(visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\"))"
+         (clojureCode
+          (format
+           "(pr-str (visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\")))"
            (base64-encode-string expanded-visi-code t)))
          (resultParams (cdr (assoc :result-params ob-params)))
          result)
