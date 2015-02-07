@@ -32,10 +32,14 @@
 	  ))
 
 (defun org-babel-expand-body:visi (body params)
-  "Expand BODY according to PARAMS, return the expanded body.
-."
-  ;; todo. May need real thing here.
-  (org-babel-expand-body:generic body params))
+  "Do nothing. Return BODY.
+This is for Org mode to pass header argument `:var' into source code, and is language specific. That is, allow org mode to pass in one or more pairs of variable name/value into Visi source code. This should be implemented in the target language as a local variable for just the block of code.
+URL `http://orgmode.org/manual/Code-block-specific-header-arguments.html#Code-block-specific-header-arguments'"
+  ;; example of passing var
+  ;; #+BEGIN_SRC python :exports both :var xx=3 yy=5
+  ;; return xx
+  ;; #+END_SRC
+  body)
 
 (defun org-babel-execute:visi (visi-code ob-params)
   "Execute a block of Visi code with Babel."
