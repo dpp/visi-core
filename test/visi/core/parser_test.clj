@@ -33,6 +33,11 @@
   (t/testing
    "Test number"
 
+   (t/is (=
+          (vp/parse-and-eval-for-tests "250,000")
+          (int  (vp/parse-and-eval-for-tests "250,000.00"))
+          250000))
+
     (t/is (=
            (vp/parse-and-eval-for-tests "3 + 4")
            (vp/parse-and-eval-for-tests "3+4")
@@ -61,8 +66,8 @@
    "Test Keyword"
   ;; keyword has the form 「:‹x›」. It is similar to clojure keyword. In visi syntax, often interchangable in places that allow identifier. It gets turned into clojure keyword.
 
-    (t/is (= (vp/parse-for-tests ":x25707") :x25707))
-    (t/is (= (vp/parse-for-tests ":p40689") :p40689)))
+    (t/is (= (vp/parse-for-tests "x25707:") :x25707))
+    (t/is (= (vp/parse-for-tests "p40689:") :p40689)))
 
   (t/testing
    "Test StringLit." ; todo, test all the backslash special case
@@ -79,16 +84,25 @@
            (vp/parse-for-tests "\"3	4\"")
            '"3\t4"))
 
+    (t/is (=
+           (vp/parse-for-tests "#''foo\"dog
+moose' cats'' "))
+          "foo\"dog\nmoose' cats"
+          )
+
     (t/is (= (vp/parse-for-tests "\"😸\"") '"😸")); unicode beyond BMP
 )
 
+
+
+
   (t/testing
    "Test RegexLit"
-    (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a.+/, \"abc\")") "abc"))
-    (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/a/, \"b\")") nil))
-    (t/is (= (vp/parse-and-eval-for-tests "re$-matches( #/.文/, \"中文\")") "中文"))
+    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/a.+/, \"abc\")") "abc"))
+    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/a/, \"b\")") nil))
+    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/.文/, \"中文\")") "中文"))
 
-    (t/is (= (vp/parse-and-eval-for-tests "re$-seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x"))))
+    (t/is (= (vp/parse-and-eval-for-tests "re_seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x"))))
 
   (t/testing
    "Test operators OprExpression"
@@ -282,8 +296,7 @@ end")
 
     (t/is (=
            (vp/parse-for-tests "source x49519 = 7")
-           '(def x49519 (visi.core.runtime/build-rdd-from-url
-                         (visi.core.runtime/spark-context) 7)))))
+           '(def x49519 7))))
 
   (t/testing
    "Test SINK syntax"
@@ -324,15 +337,15 @@ end")
 
   ;; test extra spaces
     (t/is (=
-           (vp/parse-for-tests "x = {\"a\" -> 7 , \"b\" -> 8}")
-           (vp/parse-for-tests "x = {\"a\"-> 7 , \"b\" -> 8}")
-           (vp/parse-for-tests "x = {\"a\" ->7 , \"b\" -> 8}")
-           (vp/parse-for-tests "x = {\"a\"->7 , \"b\" -> 8}")
-           (vp/parse-for-tests "x = {\"a\" -> 7, \"b\" -> 8}")
-           (vp/parse-for-tests "x = {\"a\" -> 7 ,\"b\" -> 8}")
+           (vp/parse-for-tests "x = {\"a\"  7 , \"b\" 8}")
+           (vp/parse-for-tests "x = {\"a\" 7 , \"b\"  8}")
+           (vp/parse-for-tests "x = {\"a\" 7 , \"b\"  8}")
+           (vp/parse-for-tests "x = {\"a\" 7 , \"b\"  8}")
+           (vp/parse-for-tests "x = {\"a\" 7, \"b\"  8}")
+           (vp/parse-for-tests "x = {\"a\" 7 ,\"b\"  8}")
            '(def x {"a" 7, "b" 8})))
 
-    (t/is (= (vp/parse-and-eval-for-tests "{:y -> 7}") '{:y 7}))
+    (t/is (= (vp/parse-and-eval-for-tests "{y: -> 7}") '{:y 7}))
     (t/is (= (vp/parse-and-eval-for-tests "{.y -> 7}") '{:y 7}))
     (t/is (= (vp/parse-and-eval-for-tests "{\"y\" -> 7}") '{"y" 7}))
 
@@ -351,12 +364,14 @@ end")
                         (.y it)))))
 
       (t/is (=
-             (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
+             (vp/parse-and-eval-for-tests "x = {y: -> 7}; x .y")
+             (vp/parse-and-eval-for-tests "x = {y: 7}; x .y")
              (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
              7))
 
       (t/is (=
-             (vp/parse-and-eval-for-tests "x = {:y -> 7}; x .y")
+             (vp/parse-and-eval-for-tests "x = {y: -> 7}; x .y")
+             (vp/parse-and-eval-for-tests "x = {y: 7}; x .y")
              (vp/parse-and-eval-for-tests "x = {.y -> 7}; x .y")
              7)))
 
@@ -379,7 +394,7 @@ end")
    ;; test chained merge
       (t/is (=
              (vp/parse-for-tests "{\"a\" -> 7, \"b\" -> 8} %% \"x\" -> 3 %% \"y\" -> 3")
-             '(merge {"a" 7, "b" 8} ["x" 3] ["y" 3])))
+             '(merge (merge  {"a" 7, "b" 8} ["x" 3]) ["y" 3])))
 
    ;; test merge of 2 maps
       (t/is (=
@@ -599,7 +614,7 @@ end")
 
     (t/is (= (vp/parse-and-eval-for-tests "x=[3]; x[0]")
              (vp/parse-and-eval-for-tests "x=[2,[3]]; x[1][0]")
-             (vp/parse-and-eval-for-tests "x = {:a -> 3, :b -> 4}; x[:a]")
+             (vp/parse-and-eval-for-tests "x = {a: 3, b: 4}; x[a:]")
              '3)))
 
   (t/testing

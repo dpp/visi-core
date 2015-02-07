@@ -44,7 +44,7 @@
          (expanded-visi-code (org-babel-expand-body:visi visi-code ob-params))
          (clojureCode
           (format
-           "(pr-str (visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\")))"
+           "(visi.core.runtime/as-string (visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\")))"
            (base64-encode-string expanded-visi-code t)))
          (resultParams (cdr (assoc :result-params ob-params)))
          result)

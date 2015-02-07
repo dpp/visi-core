@@ -17,13 +17,14 @@
   "Takes 1 argument: res. res is a Clojure form, e.g. `(def x 4).
 Returns a new res, but with metadata attached to the second element of res.
 the new metadata is metadata of res, plus a new pair {:source res}"
-  [res]
-  (binding [*print-meta* true]
-    (cons (first res)
-          (cons
-           (vary-meta (second res) merge {:visi-source *current-line*
-                                          :clj-source (pr-str res)})
-           (drop 2 res)))))
+  ([res] (insert-meta res {}))
+  ([res extras]
+   (binding [*print-meta* true]
+     (cons (first res)
+           (cons
+            (vary-meta (second res) merge {:visi-source *current-line*
+                                           :clj-source (pr-str res)} extras)
+            (drop 2 res))))))
 
 (def multipliers
   "A map for converting units into milliseconds.
@@ -93,6 +94,11 @@ such that it becomes a valid Clojure expression."
 (def regexlit
   #"#(_+|/+|\|+){1}+(.+?)\1{1}?")
 
+(def stringlit
+  #"(?s:#(\"{2,}|\'{2,}|\^{2,}){1}+(.+?)\1{1}?)"
+  )
+
+
 (def parse-def
   "Visi grammar in Instaparse format."
   (str  "
@@ -108,7 +114,7 @@ such that it becomes a valid Clojure expression."
 
   Loadable = <'['> SPACES? FullSymbol SPACES? <','> SPACES? StringLit SPACES? <']'>
 
-  Namespace = <'$namespace('> SPACES? NamespaceName (SPACES? <','> (Requires | Import | Load))* SPACES? <')'> SPACES? LineEnd;
+  Namespace = <'$package('> SPACES? NamespaceName (SPACES? <','> (Requires | Import | Load))* SPACES? <')'> SPACES? LineEnd;
 
   Require = NamespaceName (SPACES <'as'> SPACES NamespaceName)?;
 
@@ -130,18 +136,20 @@ such that it becomes a valid Clojure expression."
             IDENTIFIER SPACES? <','>? SPACES? <')'> SPACES?
             <'='> EXPRESSION SPACES? LineEnd;
 
-  SINK = <START_OF_LINE> (<'sink:'> | <'sink'> ) SPACES IDENTIFIER SPACES? <'='> EXPRESSION
+  SINK = <START_OF_LINE> (<'sink:'> | <'sink'> ) SPACES IDENTIFIER SPACES? <'='> SPACES? EXPRESSION
          <'\n'>;
 
   Source = <START_OF_LINE> <'source'> SPACES IDENTIFIER SPACES? (<'='> SPACES? (URL | EXPRESSION))? LineEnd+;
 
   START_OF_LINE = #'^' ;
 
+
+
   <SPACES> = (<'\n'> SPACES) / (SPACES <'\n'> SPACES) /
              (SPACES? <LineComment> SPACES?) / (SPACES? <BlockComment> SPACES?) /
-             <(' ' | '\t')+>;
+             <#'\\s+'>;
 
-  <LineComment> = (SPACES? <'##'> (#'[^\n]')*);
+  <LineComment> = (<'##'> (#'[^\n]')*);
 
   <BlockComment> = <'/*'> (BlockComment | (!'*/' AnyChar))* <'*/'>;
 
@@ -211,16 +219,16 @@ such that it becomes a valid Clojure expression."
                    Samplecommand | Foldcommand | Reducecommand | Productcommand |
                    Groupbycommand
 
-  Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
+  Mapcommand = (<'xform'> | <'map'>) SPACES (IDENTIFIER / Keyword / FunctionExpr / FuncCall / ParenExpr)
 
-  Flatmapcommand = (<'xform-cat'> | <'mapcat'> | <'flatmap'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
+  Flatmapcommand = (<'xform-cat'> | <'mapcat'> | <'flatmap'>) SPACES (IDENTIFIER / Keyword / FunctionExpr / FuncCall / ParenExpr)
 
-  Filtercommand = (<'filter'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
+  Filtercommand = (<'filter'>) SPACES (IDENTIFIER / Keyword / FunctionExpr / FuncCall / ParenExpr)
 
-  Sortcommand = (<'sort'>) SPACES (IDENTIFIER | Keyword | FunctionExpr)
-                  (SPACES <','> ('ascending' | 'descending'))?
+  Sortcommand = (<'sort'>) SPACES (IDENTIFIER / Keyword / FunctionExpr / FuncCall / ParenExpr)
+                  (SPACES? <','> SPACES? ('ascending' | 'descending'))?
 
-  Groupbycommand = (<'group by'> / <'group'> ) SPACES (IDENTIFIER | Keyword | FunctionExpr)
+  Groupbycommand = (<'group by'> / <'group'> ) SPACES (IDENTIFIER / Keyword / FunctionExpr / FuncCall / ParenExpr)
 
   Zipcommand = (<'join'> | <'zip'>) SPACES (IDENTIFIER |
                       (<'('> (SPACES? IDENTIFIER SPACES? <','> SPACES?)+ <')'> ))
@@ -228,16 +236,16 @@ such that it becomes a valid Clojure expression."
   Productcommand = (<'product'> ) SPACES (IDENTIFIER |
                       (<'('> (SPACES? IDENTIFIER SPACES? <','> SPACES?)+ <')'> ))
 
-  Dropcommand = (<'drop'>) SPACES (IDENTIFIER | ConstExpr | ParenExpr)
+  Dropcommand = (<'drop'>) SPACES (IDENTIFIER / ConstExpr / ParenExpr / FuncCall / ParenExpr)
 
-  Samplecommand = (<'sample'>) SPACES (IDENTIFIER | ConstExpr | ParenExpr)
+  Samplecommand = (<'sample'>) SPACES (IDENTIFIER / ConstExpr / ParenExpr / FuncCall / ParenExpr)
 
   Reducecommand = (<'reduce'>) SPACES
-                (IDENTIFIER | FunctionExpr)
+                (IDENTIFIER / FunctionExpr / FuncCall / ParenExpr)
 
   Foldcommand = (<'fold'>) SPACES
-                (((IDENTIFIER | ConstExpr | ParenExpr | MapExpr | VectorExpr)
-                   SPACES <'->'> SPACES)? (IDENTIFIER | FunctionExpr))
+                (((IDENTIFIER / ConstExpr / ParenExpr / MapExpr / VectorExpr)
+                   SPACES <'->'> SPACES)? (IDENTIFIER / FunctionExpr / FuncCall / ParenExpr))
 
   OprExpression = SPACES? Op10Exp SPACES?
 
@@ -248,15 +256,15 @@ such that it becomes a valid Clojure expression."
   EXPRESSION = EXPRESSION2 / PipeExpression / PipeFunctionExpression /
                     Pipe2Expression / Pipe2FunctionExpression
 
-  EXPRESSION2 = BlockExpression / GetExpression /
-  IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
+  EXPRESSION2 = (BlockExpression / GetExpression /
+  IfElseExpr / FuncCall / ParenExpr / (OprExpression) /
   FieldExpr / FunctionExpr / MapExpr / VectorExpr / SetExpr /
-  InlineFunc / ((IDENTIFIER | ClojureSymbol)) / MergeExpr / (OprExpression)
+  InlineFunc / ((IDENTIFIER | ClojureSymbol)) / ConstExpr / MergeExpr )
 
   EXPRESSION3 = SPACES? (BlockExpression / GetExpression /
-  IfElseExpr / FuncCall / ParenExpr /  ConstExpr /
-  FieldExpr / FunctionExpr / MapExpr / VectorExpr / SetExpr /
-  InlineFunc / ((IDENTIFIER | ClojureSymbol)) / MergeExpr) SPACES?
+  IfElseExpr / FuncCall / ParenExpr  / ConstExpr /
+  FieldExpr / MapExpr / VectorExpr / SetExpr /
+  ((IDENTIFIER | ClojureSymbol)) / MergeExpr) SPACES?
 
 
   MergeExpr = EXPRESSION (SPACES? <'%%'> SPACES? Pair)+;
@@ -273,14 +281,14 @@ such that it becomes a valid Clojure expression."
 
   ParenExpr = Partial1 / Partial2 / Partial3 / (SPACES? <'('> EXPRESSION <')'> SPACES?);
 
-  Keyword = <':'> IDENTIFIER;
+  Keyword =  IDENTIFIER <':'> ;
 
   IfElseExpr = (SPACES? <'if('> SPACES? EXPRESSION SPACES? <','> EXPRESSION SPACES? <','> EXPRESSION <')'> ) /
                (SPACES? <'if'> SPACES EXPRESSION SPACES <'then'>
                SPACES EXPRESSION SPACES <'else'> SPACES (OprExpression / EXPRESSION)) /
                (EXPRESSION SPACES <'?'> SPACES EXPRESSION SPACES <':'> SPACES (OprExpression / EXPRESSION));
 
-  ConstExpr = SPACES? (Number | Keyword | StringLit | RegexLit) SPACES?;
+  ConstExpr = SPACES? (Number / Keyword / StringLit / RegexLit) SPACES?;
 
   RegexLit = #'" regexlit "'
 
@@ -294,7 +302,7 @@ such that it becomes a valid Clojure expression."
 
   FieldExpr = SPACES? IDENTIFIER (ForceMethod / MethodMethod / FieldField / ForceField)+ SPACES?;
 
-  <FunctionExpr> = HashFunctionExpr / HashFunctionExpr2 / HashFunctionExpr3 / PartialFunction / FunctionExpr1 / DotFuncExpr / Partial1 / Partial2 / Partial3
+  <FunctionExpr> = FunctionExpr1 / HashFunctionExpr / HashFunctionExpr2 / HashFunctionExpr3 / PartialFunction / DotFuncExpr / Partial1 / Partial2 / Partial3
 
   PartialFunction = (SPACES? ('|' | '<|') SPACES FuncCall)
 
@@ -306,13 +314,13 @@ such that it becomes a valid Clojure expression."
 
   DotFuncExpr = SPACES? <'.'> IDENTIFIER
 
-  FunctionExpr1 = SPACES? (IDENTIFIER | (<'('> SPACES? (IDENTIFIER SPACES?
+  FunctionExpr1 = (IDENTIFIER | (<'('> SPACES? (IDENTIFIER SPACES?
                  <','> SPACES?)*  IDENTIFIER SPACES? <','>? SPACES? <')'> ) )
-                 SPACES? <'=>'> SPACES? EXPRESSION SPACES?;
+                 SPACES? <'=>'> SPACES? EXPRESSION2
 
   URL = #'\\b(https?|ftp|file|twtr)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]'
 
-  Number = #'(\\-|\\+)?([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+|[0-9]+)' NumberQualifier?;
+  Number = #'(\\-|\\+)?((([0-9]{1,3}(,[0-9]{3})+)|[0-9]+)\\.[0-9]*|[0-9]*\\.[0-9]+|(([0-9]{1,3}(,[0-9]{3})+)|[0-9]+))' NumberQualifier?;
 
   NumberQualifier = ('%' | '#minutes' | '#hours' | '#seconds' | '#days');
 
@@ -328,7 +336,7 @@ such that it becomes a valid Clojure expression."
 
   Pair = (DottedThing / EXPRESSION) (<'->'> / SPACES) EXPRESSION;
 
-  StringLit = #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
+  StringLit = #'" stringlit "' / #'\"(?:(?:[\\\\]\")|[^\"])*?\"'
 
   Operator = Op1 | Op2 | Op3 | Op4 | Op5 | Op6 | Op7 | Op8 | Op9 | Op10;
   "))
@@ -351,9 +359,9 @@ such that it becomes a valid Clojure expression."
    :BlockExpression (fn [& x] `(do ~@x))
 
    :Number (fn
-             ([x] (read-string x))
+             ([x] (read-string (.replace  x "," "")))
              ([x [_ qual]]
-              (let [x (read-string x)]
+              (let [x (read-string (.replace  x "," ""))]
                 (* x (get multipliers qual)))))
 
    :GetExpression (fn [a & b] `(~'-> ~a ~@(map (fn [z] `(~'get ~z)) b)))
@@ -384,7 +392,7 @@ such that it becomes a valid Clojure expression."
                              (do
                                (visi.core.runtime/do-sink (quote  ~name) ~expression)
                                ~expression))]
-             (insert-meta res)))
+             (insert-meta res {:visi-sink true})))
 
    :Source (fn
              ([x] `(visi.core.runtime/visi-source ~x))
@@ -443,13 +451,19 @@ such that it becomes a valid Clojure expression."
                   ([x] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x true)))
                   ([x order] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x ~order))))
 
-   :StringLit (fn [x] (let [c (count x)]
-                        (-> x
-                            (.substring 1 (- c 1))
-                            (.replace "\\\"" "\"")
-                            (.replace "\\n" "\n")
-                            (.replace "\\\\" "\\")
-                            (.replace "\\t" "\t"))))
+   :StringLit (fn [x]
+                (if (.startsWith x "#")
+                  (->
+                   (re-seq stringlit x)
+                   first
+                   (nth 2))
+                  (let [c (count x)]
+                    (-> x
+                        (.substring 1 (- c 1))
+                        (.replace "\\\"" "\"")
+                        (.replace "\\n" "\n")
+                        (.replace "\\\\" "\\")
+                        (.replace "\\t" "\t")))))
 
    :RegexLit (fn [x]
                (->
@@ -738,8 +752,17 @@ eval all the lines"
 
          mostly
          (if (every? #(-> % :failed not) answers)
-           (->> answers (map #(-> % :res eval))
-                (remove #(instance? clojure.lang.Var %)))
+           (->> answers
+                (map :res)
+                (remove #(nil? %))
+                (map eval)
+                (remove #(and
+                          (not (-> % meta :visi-sink))
+                          (instance? clojure.lang.Var %)))
+                (map #(if (instance? clojure.lang.Var %)
+                        (deref %)
+                        %))
+                )
            answers
            )]
      (if (= 1 (count mostly)) (first mostly) mostly))))

@@ -479,7 +479,12 @@
 
 (defmacro visi-source
   [var-name url]
-  `(~'def ~(symbol var-name) (build-rdd-from-url (~'visi.core.runtime/spark-context) ~url)))
+  (if (string? url)
+    `(~'def ~(symbol var-name)
+       (build-rdd-from-url (~'visi.core.runtime/spark-context) ~url))
+    `(~'def ~(symbol var-name)
+       ~url)
+    ))
 
 (defmulti scala-prod-to-vector class)
 
@@ -562,7 +567,9 @@
 
 (defn do-sink
   [name expression]
-  (ti-do-sink expression (str name)))
+  ;;(ti-do-sink expression (str name))
+  nil ;; FIXME deal with sinks
+  )
 
 (defn spark-job?
   "Is the current thing running as a Spark job?"
@@ -638,6 +645,14 @@
   [x]
   (pr-str x))
 
+(defmethod as-string String
+  [x]
+  (pr-str x))
+
+(defmethod as-string clojure.lang.Keyword
+  [x]
+  (str (name x) ":"))
+
 (defmethod as-string java.util.List
   [x]
   (str "[" (join ", " (map as-string x)) "]"))
@@ -647,7 +662,28 @@
   (str "{" (join ", " (map (fn [[k v]] (str (as-string k) " "
                                             (as-string v))) x)) "}"))
 
-
-(defmethod as-string String
+(defmethod as-string java.util.Map
   [x]
-  (str "Moooooooo " x))
+  (str "{" (join ", " (map (fn [[k v]] (str (as-string k) " "
+                                            (as-string v))) x)) "}"))
+(defmethod as-string java.util.Set
+  [x]
+  (str "#{" (join ", " (map as-string x)) "}"))
+
+(defmethod as-string (Class/forName "[Ljava.lang.Object;")
+  [x]
+  (as-string (seq x)))
+
+(defmethod as-string nil
+  [x]
+  "nil")
+
+(defn count_for
+  "Create a map with :count 1 and the value of the key"
+  ([key] (fn [z] (count_for key z)))
+  ([key item] {:count 1 key (get item key)}))
+
+(defn merge_sum
+  "Merge-with +"
+  [x y]
+  (merge-with + x y))

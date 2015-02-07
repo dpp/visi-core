@@ -61,7 +61,7 @@ all in the same group, although the user interface (Insert Function)
 lets you pick
 functions from categories like "Statistical" or "Financial".
 
-In Visi, functions are grouped in separate packages so that it's easier
+In Visi, functions are grouped in separately named "packages" so that it's easier
 to find a function you're looking for and sometimes, like in the
 above example, we have to be explicit about which package the
 function lives in. The =::= between =Math= and =sin= tells Visi
@@ -87,7 +87,7 @@ cos_third_pi ## referencing the variable
 #+END_SRC
 
 #+RESULTS: cos_third_pi
-: (0.5000000000000001 0.5000000000000001)
+: [0.5000000000000001, 0.5000000000000001]
 
 
 In Visi, you can create your own functions. So you can use
@@ -165,7 +165,7 @@ What's a collection? It's a group of other values. For example:
 Is a collection of numbers. The specific collection type is
 called a =Vector=. It's a 1 dimensional ordered array of values.
 Ordered means that the Vector retains the elements in the
-order that it was originally created
+order that it was originally created.
 
 Visi also supports sets. Sets are unordered collections
 that contain unique values. So:
@@ -180,9 +180,9 @@ Only contains 4 elements:
 #+RESULTS: a-set
 : #{"foo" "bar" "dog" "baz"}
 
-Another collection is a map. A map is an association
-between unique keys and values. Both the keys and values
-can be any Visi value. Let's create a map of people and
+Another collection is an association. An association is collection of
+unique keys and values. Both the keys and values
+can be any Visi value. Let's create an association of people and
 ages:
 
 #+BEGIN_SRC visi
@@ -190,25 +190,29 @@ ages:
 #+END_SRC
 
 #+RESULTS:
-: {"Archer" 11, "Cat" 2, "David" 51}
+: {"Archer" 11, "Tessa" 2, "David" 51}
 
-Note that like sets, the keys are unordered.
+Note that like sets, the keys in an association are unordered.
 
 If you are familiar with [[http://en.wikipedia.org/wiki/JavaScript][JavaScript]],
-maps in Visi are like Objects in JavaScript... collections of
+associations in Visi are like Objects in JavaScript... collections of
 key/value pairs.
 
 Visi also has a =keyword= type. Keywords are handy for
-giving a common/shared name to a value in a map. For example:
+giving a common/shared name to a value in an association. For example:
 
 #+BEGIN_SRC visi
-[{:name "David", :type "Human", :age 51},
- {:name "Archer", :type "Dog", :age 11},
- {:name "Tessa", :type "Cat", :age 2}]
+[{name: "David", type: "Human", age: 51},
+ {name: "Archer", type: "Dog", age: 11},
+ {name: "Tessa", type: "Cat", age: 2}]
 #+END_SRC
 
 #+RESULTS:
-: [{:age 51, :name "David", :type "Human"} {:age 11, :name "Archer", :type "Dog"} {:age 2, :name "Tessa", :type "Cat"}]
+: [{age: 51, name: "David", type: "Human"}, {age: 11, name: "Archer", type: "Dog"}, {age: 2, name: "Tessa", type: "Cat"}]
+
+If you're familiar with JavaScript or [[http://json.org][JSON]],
+the Visi syntax for defining an association looks just like JSON.
+Familiarity is good.
 
 In Visi, functions are values just like strings and numbers and
 keywords.
@@ -219,7 +223,8 @@ function expression syntax for the moment):
 #+NAME: plus_one
 #+BEGIN_SRC visi :exports both
 
-plus_one = x => x + 1
+plus_one = ## assign a function to a name
+  x => x + 1
 
 another_plus_one(x) = x + 1
 
@@ -246,8 +251,8 @@ declaration looks kind of odd where the second looks like the way we
 learned functions in math class. We will get to some examples of passing
 functions as parameters in a little while.
 
-In Visi, top level variables (those variables defined outside
-another variable declaration) can be accessed by any expression
+In Visi, top level names (those names defined outside
+another assignment) can be accessed by any expression
 in a Visi notebook, just like values in cells in Excel.
 
 *** But why functions?
@@ -255,34 +260,286 @@ in a Visi notebook, just like values in cells in Excel.
 Functions take parameters and perform operations
 on the parameters and return a value.
 
-You're familiar with fom
+You're familiar with functions in Excel. Functions
+are built into Excel, can be added via add-ins, and
+via VisualBasic.
+
+In Visi, there are plenty of sources of functions.
+Some are built in, some can be packaged as JAR files
+and downloaded, and some can be defined in your notebook.
+
+Functions in Visi can be applied to every element of
+a collection. This is called a =map= operation.
+Hey... that's part of MapReduce... yes!
+
+We're going to build a map/reduce job and see
+how it works locally. The cool thing about Visi
+is that you can explore a job locally and then
+deploy the same job to a cluster of computers
+running [[https://storm.apache.org/][Apache Storm]],
+[[https://spark.apache.org/][Apache Spark]],
+[[http://tez.apache.org/][Apache Tez]], and other
+cluster frameworks. This is because the way you
+describe a pipeline of operations in Visi can be
+converted into a pipeline in many different
+frameworks.
+
+Let's get started.
 
 #+NAME: first-example
-#+BEGIN_SRC visi :export both
+#+BEGIN_SRC visi :exports both
 
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
 
-residents = ## Who lives with us?
- [{:name "David", :type "Human", :age 51},
- {:name "Archer", :type "Dog", :age 11},
- {:name "Tessa", :type "Cat", :age 2}]
+get_age(r) = get(r, age:)
 
-get_age(r) = get(r, :age)
+## Get the ages
+ages = map(get_age, residents)
 
-ages = ## Get the ages
-  map(get_age, residents)
+sink the_ages = ages
 
-ages
 #+END_SRC
 
-#+RESULTS: first-example
-: (51 11 2)
+And we get:
 
-You can also declare variables that are only visible to expressions
+#+RESULTS: first-example
+: [51, 11, 3]
+
+Note that we define the =source= and =sink= for the calculation.
+A =source= is the name of a place that the information comes from.
+When you're using your Visi notebook in interactive mode, you
+can define a sample of data for a =source=. But when you deploy
+the Visi notebook to your big data cluster, you can associate
+sources and sinks with platform dependent data... for example files
+on your HDFS cluster. This mechanism let's your interactively
+play with your calculations, get them right, and then
+deploy *the same* Visi notebook to your cluster.
+
+Okay... back to creating a map/reduce job.
+
+We've seen that we can =map= over data to get the =age= of each
+record, the syntax is a little verbose. Let's build an inline
+function that does the same thing:
+
+#+NAME: example2
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Get the ages
+ages = map(r => get(r, age:), residents)
+
+sink the_ages = ages
+
+#+END_SRC
+
+#+RESULTS: example2
+: [51, 11, 3]
+
+A little better, but still more verbose than we'd
+like. It turns out that a =keyword= is also a function, so
+we can shorten the function to =age:= like so:
+
+#+NAME: example3
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Get the ages
+ages = map(age:, residents)
+
+sink the_ages = ages
+
+#+END_SRC
+
+#+RESULTS: example3
+: [51, 11, 3]
+
+Now, let's compute the sum of ages using the =reduce= function.
+Yep, we're going to map *and* reduce... woo hoo:
+
+#+NAME: example4
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Get the ages
+ages = map(age:, residents)
+
+age_sum = reduce((+), ages)
+
+sink sum = age_sum
+
+#+END_SRC
+
+#+RESULTS: example4
+: 65
+
+The =reduce((+ ), ages)= expression adds up
+each element in the ages collection. The =(+)=
+expression creates a function that takes two
+parameters and adds them up. The =(operator)=
+syntax is another way of creating a function.
+
+And we can compute the average age:
+
+#+NAME: example5
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Get the ages
+ages = map(age:, residents)
+
+age_sum = reduce((+), ages)
+
+sink sum = age_sum / count(residents)
+
+#+END_SRC
+
+#+RESULTS: example5
+: 65/3
+
+Note that Visi can express rational numbers... numbers
+that are ratios of each other. This means that Visi
+avoids some floating point related issues.
+
+So, yay... we have created our first map/reduce job, except for
+one thing... the =count= function doesn't work so well over cluster,
+so we'll have to aggregate the count as part of the reduce phase:
+
+#+NAME: example6
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Get the ages
+ages = map(# {count: 1, age: it.age}, residents)
+
+age_sum = reduce(| merge_with((+)), ages)
+
+sink sum = age_sum.age / age_sum.count
+
+#+END_SRC
+
+#+RESULTS: example6
+: 65/3
+
+We've done a couple of things above... the first is
+we've introduced another mechanism for defining a
+function. Putting a =#= and then a space before an expression
+turns the expression into a function that takes one parameter
+and that parameter is named =it= (a little homage to [[http://groovy.codehaus.org/][Groovy]]).
+
+The next thing we've introduced is another mechanism for getting
+a value from an association. The =it.age= syntax is JavaScript-like
+syntax that does the same thing as =get(age: it)=.
+
+In the =age_sum= expression, we =reduce= over the =ages=
+collection. But instead of just adding the elements, we must
+merge the elements because they are associations. =merge_with=
+takes a function and two associations and merges them. Each
+for any common key in each association, the function is called
+to combine the values at each shared key.
+
+The =|= followed by a space is yet another syntax for creating
+functions. In this case, they are partially applied functions.
+A partially applied function has some parameters filled in and when
+it's called, the balance of the parameters are filled in. The following
+function declarations each do the same thing:
+
+- (x,y) => merge_ with((q, r) => q + r, x, y)
+- =#2 merge_with((+ ), it1, it2)=
+- =| merge_with((+))=
+
+So, we've created a series of steps to run a map/reduce
+job in Visi. But Visi has some syntax that helps to make
+map/reduce jobs easier to write and more obvious.
+Visi allows you to write "transformation pipes" that
+allow you to express the transformations in a single pipeline.
+
+#+NAME: example7
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Run the whole job
+job = residents |> map # {count: 1,
+                          age: it.age}
+                |> reduce | merge_with((+))
+
+sink average_age = job.age / job.count
+#+END_SRC
+
+#+RESULTS: example7
+: 65/3
+
+Finally, Visi has helper functions that make your life
+a lot easier... like creating count associations based on
+a key or merge/summing:
+
+#+NAME: example8
+#+BEGIN_SRC visi :exports both
+
+## Who lives with us?
+source residents =
+ [{name: "David", type: "Human", age: 51},
+  {name: "Archer", type: "Dog", age: 11},
+  {name: "Tessa", type: "Cat", age: 3}]
+
+## Run the whole job
+job = residents |> map count_for(age:)
+                |> reduce merge_sum
+
+sink average_age = job.age / job.count
+#+END_SRC
+
+#+RESULTS: example8
+: 65/3
+
+The =count_for= function returns a function that builds
+a count association based on the key. The =merge_sum= function
+is the same as =merge_with((+), x, y)=.
+
+So, you've built your first map/reduce job in Visi and it's
+pretty simple.
+
+Next, we're going to go through some Visi pieces/parts.
+
+You can also declare names that are only visible to expressions
 that come after the declaration in the expression. This allows
 you to compute an expression and use the result in many
 places within a larger expression. For example:
 
-#+BEGIN_SRC visi
+#+BEGIN_SRC visi :exports both
 
 test_income(income) =
   mag = Math::log10(income) ## the magnitude of the income
@@ -290,107 +547,68 @@ test_income(income) =
   else if mag < 5 then "med"
   else "high"
 
-
-
-#+END_SRC
-
-We compute the value of "mag" and then reference that
-variable in the if/then/else tests.
-
-** Functions and Big Data
-
-Most Big Data processing is done based on a paradigm called "map/reduce".
-The paradigm takes a big pile of data and applies the same operation
-to each element of the data "mapping" or transforming each element of
-data. Then the collection of "mapped" data is "reduced" to an answer
-aggregating the mapped data in a "reduce" function.
-
-There is no state or other information shared between each call to the map
-function. This means that the map function can be run simultaneously on
-many different computers for different elements in the data set. Depending on
-the mathematical properties of the reduce phase, that phase may be
-run on different computers as well.
-
-Let's look at an example of computing the average of a collection of
-numbers using map/reduce:
-
-#+BEGIN_SRC visi
-
-data = [1000, 10, 250000, 33] ## The data set
-
-mapped = map(identity, data) ## Don't change the elements
-
-reduced = reduce((acc, data) =>
-                  merge-with((+), ## Merge the accumulator and the current value
-                   acc, ## The accumulator
-                  {:cnt -> 1, ## The data to add to the accumulator
-                   :sum -> data}),
-                  {}, ## Starting value for the acculumator
-                  mapped) ## The data to reduce
-
-average = reduced.sum / reduced.cnt
+map(x => str(x, ": ", test_income(x)),
+    [300, 50,000, 250,000])
 
 #+END_SRC
 
-The above code applies the "identity" function to each element in the
-set. The identity function returns the same value it took. So, the
-mapping phase results in the same collection that was input.
+#+RESULTS:
+: ["300: low", "50000: med", "250000: high"]
 
-FIXME -- explain reduce
+We compute the value of =mag= and then reference that
+name in the =if/then/else= expression.
 
-#+BEGIN_SRC visi
+Also, note that the comma can be used as a number place separator. Put
+spaces after commas to help the Visi parser distinguish between
+=[100,240]= and =[100, 240]=.
 
-data = [1000, 10, 250000, 33] ## The data set
+Visi supports multiline, complex strings. A normal String is enclosed
+in double quotes: ="I am a String"=. But sometimes, you might
+want to have a double-quote in a string... for example if you paste
+a bunch of data you got off the Internet, you don't want to
+have to escape the Strings. Visi has a handy, string literal.
+Any sequence of characters that starts with =#= and two or more
+single quote ('), double quote (") or carrot (^) and ends with
+the same number/type of delimiter will be treated as a single string.
+This is especially useful for putting CSV data into your Visi code:
 
-mapped = map(# `Math/log10(it), data) ## Don't change the elements
-
-reduced = reduce((acc, data) =>
-                  merge-with((+), ## Merge the accumulator and the current value
-                   acc, ## The accumulator
-                  {:cnt -> 1, ## The data to add to the accumulator
-                   :sum -> data}),
-                  {}, ## Starting value for the acculumator
-                  mapped) ## The data to reduce
-
-average = reduced.sum / reduced.cnt
-
-#+END_SRC
-
-FIXME
-
-Map/Reduce jobs can contain many map and reduce phases. Visi makes it really
-simple to define the pipeline as a series of function definitions and
-chaining operations.
-
-We can rewrite the above with:
-
-#+BEGIN_SRC visi
-
-data = [1000, 10, 250000, 33] ## The data set
-
-reduced = data |>
-          map # Math/log10(it) |>
-          reduce {} -> (acc, data) => merge-with((+), acc, {:cnt -> 1,
-                                                            :sum -> data})
-
-average = reduced.sum / reduced.cnt
+#+BEGIN_SRC visi :exports both
+[
+ #'''Year,Make,Model,Description,Price''',
+ #'''1997,Ford,E350,"ac, abs, moon",3000.00''',
+ #'''1999,Chevy,"Venture ""Extended Edition""","",4900.00''',
+ #'''1999,Chevy,"Venture ""Extended Edition, Very Large""",,5000.00''',
+ #'''1996,Jeep,Grand Cherokee,"MUST SELL!
+ air, moon roof, loaded",4799.00'''
+ ]
 
 #+END_SRC
 
-Okay, so we've looked a little at Visi syntax... but let's get to
-Big Data Hello World... word count.
+#+RESULTS:
+: ["Year,Make,Model,Description,Price", "1997,Ford,E350,\"ac, abs, moon\",3000.00", "1999,Chevy,\"Venture \"\"Extended Edition\"\"\",\"\",4900.00", "1999,Chevy,\"Venture \"\"Extended Edition, Very Large\"\"\",,5000.00", "1996,Jeep,Grand Cherokee,\"MUST SELL!\n air, moon roof, loaded\",4799.00"]
 
-#+BEGIN_SRC visi
+** Immutability
 
-## split into words
-split_words = |> map # re-replace(it, #/\W/, " ") ## Replace non-words with spaces
-              |> flatmap # re-seq(#/\w+/, it) ## Split by words
+Like Excel, Visi doesn't let you change a value once it's computed.
+This is strange for users of Java and JavaScript. In addition to Visi's
+syntax which is simple and free from complex stuff from Java like =void=
+and =class= and such, Visi's types can be converted into a form that can
+be distributed across a cluster of computes. Visi data types can be
+turned into bytes that get turned back into the same data types on
+the other side of the network.
 
-## Count the words
-count_words = |> reduce #2 update-in(it1, [it2], incr)
+Between serialization and immutability, Visi provides tools that make
+writing distributed computing jobs simple.
 
-source words = ["some words", "some more words"]
+** Host Interoperability
 
-sink counted = words >> split_words >> count_words
+Visi sits on top of two host systems. All Visi code is compiled to
+(well, more technically, transliterated to) [[http://clojure.org][Clojure]]. Then
+the Clojure code is compiled into [[http://en.wikipedia.org/wiki/Java_virtual_machine][Java Virtual Machine]]
+byte-code. This means that Visi code works with any Clojure and
+Java library. Being able to work with any Java and Clojure library
+means that you have a wealth of libraries to use. But how do you
+use these libraries in Visi?
 
-#+END_SRC
+Mostly with the =$package= declaration. Note the =$=. This means
+that you're explicitly using
