@@ -303,7 +303,8 @@ end")
     (t/is (=
            (vp/parse-for-tests "sink xx = 3")
            (vp/parse-for-tests "sink: xx = 3")
-           '(def xx (do (visi.core.runtime/do-sink (quote xx) 3) 3)))))
+           '(def xx (do (visi.core.runtime/do-sink (quote xx) 3)
+                        (visi.core.runtime/visi-realize 3))))))
 
   (t/testing
    "Test VectorExpr"

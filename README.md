@@ -1,15 +1,12 @@
-visi
+Visi
 ====
 
-The private code for Visi
+Visi is a grammar and runtime that allows Excel-savvy users
+to write complex map/reduce jobs. Visi has an interactive mode
+that allows for exploration of data and a "build a map/reduce
+job" mode that generates JAR files that can be run on
+Storm, Tez, and Spark clusters.
 
----
+[More info and Justification](doc/why.html)
 
-Running Visi:
-
-* Install [lein](http://leiningen.org/)
-* type: `lein run`
-* point browser to http://localhost:8990
-
-
-
+[Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) Licensed.

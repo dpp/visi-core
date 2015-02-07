@@ -1,3 +1,13 @@
+;; (c) Copyright 2014-2015 David Pollak (@dpp, feeder.of.the.bears at gmail)
+;;
+;; http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+
 (ns visi.core.parser
   (:require
    [visi.core.util :as vu]
@@ -158,7 +168,7 @@ such that it becomes a valid Clojure expression."
   IDENTIFIER = #'(?:\\$\\.)?[a-zA-Z](?:[a-zA-Z0-9_\\?]|\\$-)*';
 
   ClojureSymbol = (<'`'> (#'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)\\/[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' |
-  #'\\.[a-zA-Z][a-zA-Z0-9\\-_\\?]*')) / #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)::[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' ;
+  #'[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*')) / #'([a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*)::[a-zA-Z\\-\\*\\+\\!\\_][a-zA-Z0-9\\-\\.\\*\\+\\!\\_]*' ;
 
   BlockExpression = SPACES? <'begin'> (SPACES | LineEnd)* (EXPRESSION LineEnd SPACES*)* EXPRESSION LineEnd* SPACES* <'end'> LineEnd?;
 
@@ -294,11 +304,11 @@ such that it becomes a valid Clojure expression."
 
   FieldField =  (SPACES? <'.'> IDENTIFIER)
 
-  ForceField =  (SPACES? <'..'> IDENTIFIER)
+  ForceField =  (SPACES? <'$.'> IDENTIFIER)
 
   MethodMethod = (SPACES? <'.'> IDENTIFIER <'('> (SPACES? EXPRESSION SPACES? <','> )* (SPACES? EXPRESSION)? SPACES? <')'>)
 
-  ForceMethod = (SPACES? <'..'> IDENTIFIER <'('> (SPACES? EXPRESSION SPACES? <','> )* (SPACES? EXPRESSION)? SPACES? <')'>)
+  ForceMethod = (SPACES? <'$.'> IDENTIFIER <'('> (SPACES? EXPRESSION SPACES? <','> )* (SPACES? EXPRESSION)? SPACES? <')'>)
 
   FieldExpr = SPACES? IDENTIFIER (ForceMethod / MethodMethod / FieldField / ForceField)+ SPACES?;
 
@@ -391,7 +401,7 @@ such that it becomes a valid Clojure expression."
                  res `(~'def ~name
                              (do
                                (visi.core.runtime/do-sink (quote  ~name) ~expression)
-                               ~expression))]
+                               (visi.core.runtime/visi-realize ~expression)))]
              (insert-meta res {:visi-sink true})))
 
    :Source (fn
@@ -448,8 +458,15 @@ such that it becomes a valid Clojure expression."
    :Groupbycommand (fn [x] (fn [inside] `(~'visi.core.runtime/v-group-by ~inside ~x)))
 
    :Sortcommand (fn
-                  ([x] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x true)))
-                  ([x order] (fn [inside] `(~'visi.core.runtime/v-sort-by ~inside ~x ~order))))
+                  ([x] (fn [inside]
+                         `(~'visi.core.runtime/v-sort-by
+                           ~inside ~x ~'visi.core.runtime/ascending)))
+                  ([x order]
+                   (fn [inside]
+                     `(~'visi.core.runtime/v-sort-by
+                       ~inside ~x ~(if (= "ascending" order)
+                                     'visi.core.runtime/ascending
+                                     'visi.core.runtime/descending)))))
 
    :StringLit (fn [x]
                 (if (.startsWith x "#")
@@ -540,7 +557,7 @@ such that it becomes a valid Clojure expression."
 
    :Namespace (fn [ns & x]
                 (let [ret
-                      `(do
+                      `(~'do
                          (~'ns ~ns (:require [cemerick.pomegranate]))
                          ~@(mapcat
                             (fn [z]
@@ -569,7 +586,10 @@ such that it becomes a valid Clojure expression."
                                  (fn [q]
                                    `(~'clojure.core/require ~q))
                                  (rest z))))
-                            x))]
+                            x)
+                         (~'def ~'$$package$$ {:x (quote ~x)
+                                               :ns (quote ~ns)})
+                         )]
                   (with-meta ret {:dont-fix true :source `(quote ret)})))
 
    ;; :Import (fn [& x] `(:import ~@x))

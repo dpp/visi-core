@@ -1,14 +1,23 @@
+;; (c) Copyright 2014-2015 David Pollak (@dpp, feeder.of.the.bears at gmail)
+;;
+;; http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+
 (ns visi.core.runtime
   (:require [org.httpkit.client :as httpc]
             [clojure.data.csv :as csv]
-            ;; [gorilla-renderable.core :as render]
             [clojure.string :as cljstr]
             [visi.core.util :as vu]
             [clojure.data.json :as json]
             [clojure.tools.analyzer.jvm :as ca]
             [clojure.tools.analyzer.passes.jvm.emit-form :as e])
 
-  (:import ;; FIXME (clojure.tools.nrepl.transport Transport)
+  (:import
    (clojure.lang IDeref)
    (java.util UUID)))
 
@@ -73,6 +82,14 @@
 ;; And boom, we have a function that can be serialized and sent across the Spark cluster.
 ;; This also means that we can implement the `FunctionFor` protocol to support whatever arbitrary system we want (Hadoop MapReduce, Storm, etc.)
 
+(def ascending
+  "A constant for ascending sorts"
+  ::ascending)
+
+(def descending
+  "A constant for descending sorts"
+  ::descending)
+
 
 (defprotocol FunctionFor
   (void-func-for [this form])
@@ -118,8 +135,7 @@
   []
   (throw (Exception. "Not Implemented")))
 
-(extend java.util.List
-  FunctionFor
+(def local-functions
   {:void-func-for (fn [this form] (eval form))
    :double-func-for (fn [this form] (eval form))
    :double-iter-func-for (fn [this form] (eval form))
@@ -130,10 +146,10 @@
    :iter-func2-for (fn [this form] (eval form))
    :iter-func-for (fn [this form] (eval form))
    :func3-for (fn [this form] (eval form))
-   :func2-for (fn [this form] (eval form))}
+   :func2-for (fn [this form] (eval form))})
 
-  TransformInfo
-  {:ti-aggregate
+(def local-transforms
+{:ti-aggregate
    (fn [this zero-value seq-op comb-op]
      (FIXME))
 
@@ -212,9 +228,13 @@
      (filter (func-for this func) this))
 
    :ti-sort-by
-   (fn [this func ascending]
-      ;; FIXME deal with descending
-     (sort-by (func-for this func) this))
+   (fn [this func asc-or-desc]
+     (let [ret
+           (sort-by (func-for this func) this)]
+       (if (= asc-or-desc descending)
+         (reverse ret)
+         ret)
+       ))
 
    :ti-flat-map-values
    (fn [this func]
@@ -223,6 +243,20 @@
    :ti-key-by
    (fn [this func]
      (FIXME))})
+
+(extend java.util.List
+  FunctionFor
+  local-functions
+
+  TransformInfo
+  local-transforms)
+
+(extend java.util.Map
+  FunctionFor
+  local-functions
+
+  TransformInfo
+  local-transforms)
 
 (defn- make-array-thing
   [it]
@@ -343,8 +377,8 @@
   `(ti-reduce-by-key ~this ~(clean-it-up func &env)))
 (defmacro v-filter [this func]
   `(ti-filter ~this ~(clean-it-up func &env)))
-(defmacro v-sort-by [this func ascending]
-  `(ti-sort-by ~this ~(clean-it-up func &env) ascending))
+(defmacro v-sort-by [this func asc-or-dec]
+  `(ti-sort-by ~this ~(clean-it-up func &env) ~asc-or-dec))
 
 
 
@@ -595,13 +629,6 @@
   [string regex replacement]
   (clojure.string/replace string regex replacement))
 
-(def ascending
-  "A constant for ascending sorts"
-  ::ascending)
-
-(def descending
-  "A constant for descending sorts"
-  ::descending)
 
 (defn pre-partial
   "Takes a function f and fewer than the normal arguments to f, and
@@ -687,3 +714,25 @@
   "Merge-with +"
   [x y]
   (merge-with + x y))
+
+(defmulti visi-realize class)
+
+(defmethod visi-realize java.util.List
+  [x]
+  (take 10 x))
+
+(defmethod visi-realize java.util.Map
+  [x]
+  (take 10 (seq  x)))
+
+(defmethod visi-realize clojure.lang.IDeref
+  [x]
+  (visi-realize (deref x)))
+
+(defmethod visi-realize nil
+  [x]
+  nil)
+
+(defmethod visi-realize java.lang.Object
+  [x]
+  x)

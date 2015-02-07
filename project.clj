@@ -1,8 +1,18 @@
-(defproject visi/core "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+;; (c) Copyright 2014-2015 David Pollak (@dpp, feeder.of.the.bears at gmail)
+;;
+;; http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+
+(defproject visi/core "0.1.0"
+  :description "The core parser and runtime for Visi"
+  :url "http://visi.works"
+  :license {:name "Apache 2.0"
+            :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [instaparse "1.3.5"]
                  [org.clojure/data.codec "0.1.0"]
