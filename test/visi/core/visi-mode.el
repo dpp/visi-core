@@ -15,19 +15,18 @@
 ;; 3. Restart emacs.
 
 ;;; TO EVAL VISI CODE
-;; Call `visi-repl-connect' to start Cider.
+;; Call `cider-jack-in' or `cider-connect' to start Visi/clojure REPL.
 ;; After Cider is ready (you'll see a buffer popping up with prompt), call `visi-load-visi-lib'. Wait a few seconds for visi lib to load
-;; Call `visi-eval-line-or-region'
+;; Call `visi-eval-line-or-region' to eval.
 
-;; 2015-01-20 things to do
+;; 2015-02-07 things to do
 
-;; • make org mode able to contain visi code, with syntax highlighting, and also eval it. see http://orgmode.org/worg/org-contrib/babel/intro.html
-;; • in org mode, when  visi code is changed (or perhaps by some command), update part of the org mode mode to show the evaluated result.
-;; • eliminate visi-load-visi-lib step
-;; • 2015-01-27 possibly need to escape backslash. try regex ⁖  「re$-matches( #/a.+/, "abc")」 with lots slash or backslash and also contain double quotes.
-;; • make sure there's a doc on how to use/setup
-;; • add inline doc
-;; • be sure visi code org mode can be exported to html, with syntax highlighting
+;; • 2015-02-07 eliminate visi-load-visi-lib step. can be done by (nrepl-sync-request:eval …)
+;; • 2015-01-27 possibly need to escape backslash. try regex ⁖  「re$-matches( #/a.+/, "abc")」 with lots slash or backslash and also contain double quotes. Solution, base64 encode it. See (visi.core.runtime/as-string (visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\"))) in ob-visi.el
+;; • make/enhance the syntax coloring syntax based (instead of just inert keywords)
+;; • improve doc on how to use/setup
+;; • add/improve inline doc to all functions.
+;; • consider using https://github.com/sanel/monroe as nrepl backend instead of CIDER
 
 (require 'cider)
 (require 'newcomment)
@@ -724,13 +723,13 @@
 
 (setq visi-abbrev-table nil)
 
+;; TODO add more Visi abbrevs
 (define-abbrev-table 'visi-abbrev-table
   '(
-    ("if" "if(TEST▮, TrueBody, ElseBody)" nil :system t )
-)
+    ("if" "if(TEST▮, TrueBody, ElseBody)" nil :system t ))
 
   "abbrev table for `visi-mode'"
-;; :regexp "\\_<\\([_-0-9A-Za-z]+\\)"
+  ;; :regexp "\\_<\\([_-0-9A-Za-z]+\\)"
   :regexp "\\([_-0-9A-Za-z]+\\)"
   :case-fixed t
   )
@@ -738,45 +737,27 @@
 
 ;; eval related
 
-(defun visi-display-ready-message ()
-  ""
-  (interactive)
-  (message "Visi ready."))
-
-(defun visi-visi-lib-loaded-p ()
-  ""
-  (interactive)
-  (let ()
-    (if (cider-connected-p)
-        (progn
-          (if 3
-              ;; check if visi lib is loaded
-              ;; (not= (resolve 'clojure.core/list) nil)
-              ;; (not= (resolve 'visi.core.parser/line-parser) nil)
-              nil
-            nil))
-      nil
-      )))
-
 (defun visi-repl-connect ()
-  ""
+  "Start a connection to Visi.
+This command currently uses emacs CIDER lib to connect to Clojure nREPL."
   (interactive)
   (let ()
     (cider-jack-in)
-    ;; todo problem now is that nrepl is async. Need to wait for connection to finish before loading visi lib. e.g. write callback, or probably look at process sentinel, see `nrepl-start-server-process'
+    ;; TODO problem now is that nrepl is async. Need to wait for connection to finish before loading visi lib. e.g. write callback, or probably look at process sentinel, see `nrepl-start-server-process', or (nrepl-sync-request:eval …) 
     ;; (visi-load-visi-lib)
     ;; (add-hook 'nrepl-connected-hook 'visi-load-visi-lib) ;; don't
     ))
 
 (defun visi-load-visi-lib ()
-  "Send nrepl code to load Visi lib."
+  "Send nREPL code to load Visi lib."
   (interactive)
   (let ()
     (cider-interactive-eval "(ns emacsvisi-test (:require [clojure.test] [visi.core.parser] [visi.core.runtime] [visi.core.util]))")
     (message "`visi-load-visi-lib' called, wait for 4 seconds.")
     ))
 
-;; write a nrepl handler.
+;; possibly write a nrepl handler.
+;; possibly write a nrepl handler.
 ;; a function that takes one arg.
 ;; the arg is response from reple server process.
 ;; the response is “alist”, and contains at least “id” and “session” keys.
@@ -818,13 +799,6 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
          (when current-prefix-arg (cider-eval-print-handler))))
     (user-error "No active nREPL connection. Call `visi-repl-connect' first.")))
 
-(defun visi-gen-random-namespace ()
-  ""
-  (interactive)
-  (format "session-%c%d"
-            (+ (random 25) 97)
-            (random (+ 99))))
-
 
 ;; syntax coloring related
 
@@ -864,24 +838,22 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
 
 ;; keybinding
 
-(when (string-equal system-type "windows-nt")
-  (define-key key-translation-map (kbd "<apps>") (kbd "<menu>")))
-
 (defvar visi-keymap nil "Keybinding for `visi-mode'")
 (progn
   (setq visi-keymap (make-sparse-keymap))
   (define-key visi-keymap (kbd "C-x C-e") 'visi-eval-line-or-region)
   (define-key visi-keymap (kbd "C-x M-c") 'cider-connect)
-  (define-key visi-keymap (kbd "C-x M-j") 'cider-jack-in)
-)
+  (define-key visi-keymap (kbd "C-x M-j") 'cider-jack-in))
 
 
 
 ;; define the mode
 (defun visi-mode ()
   "A major mode for Visi.
+See URL `https://github.com/visicorp/visi-core'
 
 \\{visi-keymap}"
+  ;; TODO possibly consider making it derived after prog-mode (and deal with whatever that problem)
   (interactive)
 
   (kill-all-local-variables)
