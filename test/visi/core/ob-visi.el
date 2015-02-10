@@ -32,14 +32,39 @@
 	  ))
 
 (defun org-babel-expand-body:visi (body params)
-  "Do nothing. Return BODY.
-This is for Org mode to pass header argument `:var' into source code, and is language specific. That is, allow org mode to pass in one or more pairs of variable name/value into Visi source code. This should be implemented in the target language as a local variable for just the block of code.
+  "Expand BODY according to PARAMS, return the expanded BODY.
+For example, this in org mode:
+
+ #+BEGIN_SRC visi :var xx=3 yy=5
+ xx + yy
+ #+END_SRC
+
+will make this function return this string
+ \"xx = 3; yy = 5;  xx + yy\"
+
+If no :var header is used, BODY is returned unchanged.
+
 URL `http://orgmode.org/manual/Code-block-specific-header-arguments.html#Code-block-specific-header-arguments'"
-  ;; example of passing var
-  ;; #+BEGIN_SRC python :exports both :var xx=3 yy=5
-  ;; return xx
-  ;; #+END_SRC
-  body)
+  (let (
+         (ξtheVars (mapcar #'cdr (org-babel-get-header params :var)))
+         (localVarStr ""))
+    ;; (print (format "ξtheVars is 「%s」" ξtheVars))
+    ;; (print (format "first var is symbol 「%s」" (symbolp (car (car ξtheVars)))))
+    ;; (print (format "second var is number 「%s」" (numberp (cdr (car ξtheVars)))))
+    ;; (print (concat (symbol-name (car (car ξtheVars))) "=" (number-to-string (cdr (car ξtheVars))) "; "))
+    (mapc
+     (lambda (varValConsPair)
+       (setq
+        localVarStr
+        (concat localVarStr
+                (symbol-name (car varValConsPair))
+                " = "
+                (number-to-string (cdr varValConsPair))
+                "; ")))
+     ξtheVars)
+    ;; (print (format "localVarStr is 「%s」" localVarStr))
+    (concat localVarStr " " body)
+    ))
 
 (defun org-babel-execute:visi (visi-code ob-params)
   "Execute a block of Visi code with Babel."

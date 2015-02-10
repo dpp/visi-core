@@ -1,21 +1,36 @@
+##################################################
+## comment
+
 /* C style comment here */
+
 /* C style
 here */
+
 ##comment
 ## comment
    ## comment
-## comment "something". todo.
-1 + 2
 
-## add $namespace stuff. check `name $name .name
-1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6 ## 8.9061001E7
+## comment "something". todo.
+
+##################################################
+## simple expressions
+
+1 + 2
+1 - 2
+2 * 3
+1 / 2
+1 / 2.
+
 3 < 2
 3 > 2
 3 <= 2
 3 >= 2
 
+1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6 ## 8.9061001E7
+
 true && false || false
 
+## code block
 begin
  x = 4  ## #'user/x
  y = 3  ## #'user/y
@@ -24,19 +39,15 @@ begin
  x == y ## false
 end
 
-"this" & "that" ## string join
+## string join
+"this" & "that"
 
 ## merge
 {"a" -> 7, "b" -> 8, "c" -> 9 } %% {"x" -> 3, "b" -> 2 }
 x = {"a" -> 7, "b" -> 8, "c" -> 9 }; y = {"x" -> 3, "b" -> 2 }; x %% y
 
-:xkeyword
-
 a1 = "The Brown Cow"
 length(a1)
-
-## regex
-re$-matches( #/a.+/, "abc") ## "abc"
 
 x = 3; x
 source xyz = "https://example.com/x.txt"
@@ -47,19 +58,29 @@ begin
     x + 1
 end ## 5
 
-f(x, y) = x + y; f(3,4) ## function def, function call
+##################################################
+## simple data types
 
-y = [3, 7, 5] ## vector
-
+## vector
+y = [3, "b", 5] 
 
 ## set
 #{"foo", "bar", "baz", "foo", "dog", "dog", "baz"}
 
-## map
+## key/value pair, association list
 {"David" 51, "Archer" 11, "Tessa" 2}
-{:y -> 7, :b -> 8}
+{:y -> 7, :b -> 8} ## ?
 
-## java stuff
+## keyword
+:xkeyword ## ?
+[{name: "David", type: "Human", age: 51},
+ {name: "Archer", type: "Dog", age: 11},
+ {name: "Tessa", type: "Cat", age: 2}]
+
+##################################################
+## package, namespace, related
+## Todo: add namespace stuff. check `name $name .name
+
 Math::sin(0.5)
 
 `Math/sin(0.5) ## 0.479425538604203
@@ -71,10 +92,16 @@ Math::cos(Math::PI / 3) ## expression
 cos_third_pi = Math::cos(Math::PI / 3) ## declaration
 cos_third_pi ## referencing the name
 
+## regex
+re$-matches( #/a.+/, "abc") ## "abc"
+
+##################################################
+## function def, function call
+
+f(x, y) = x + y; f(3,4)
 plus_one = x => x + 1; plus_one(3) ## 4
 plus_one(x) = x + 1                ## #'user/plus_one
 
-## function def
 calc_tax(income) = income * if(income > 5000, 40%, 20%) ## #'user/calc_tax
 tax_rate(income) = if(income > 5000, 40%, 20%)          ## #'user/tax_rate
 
@@ -88,8 +115,6 @@ tax_rate(income) =
 calc_tax(income) = income * tax_rate(income)
 
 calc_tax(50000) ## 20000N
-
-
 
 test_income(income) =
   mag = `Math/log10(income) ## the magnitude of the income

@@ -28,6 +28,9 @@
 ;; • add/improve inline doc to all functions.
 ;; • consider using https://github.com/sanel/monroe as nrepl backend instead of CIDER
 
+;; • 2015-02-09 regex based syntax coloring for this [{name: "David", type: "Human", age: 51}, {name: "Archer", type: "Dog", age: 11}, {name: "Tessa", type: "Cat", age: 2}]
+;; • 2015-02-09 regex based syntax coloring for package related stuff. ⁖  「Math::cos(Math::PI / 3)」, 「re$-matches( #/a.+/, "abc")」
+
 (require 'cider)
 (require 'newcomment)
 
