@@ -32,6 +32,9 @@ x = {"a" -> 7, "b" -> 8, "c" -> 9 }; y = {"x" -> 3, "b" -> 2 }; x %% y
 
 :xkeyword
 
+a1 = "The Brown Cow"
+length(a1)
+
 ## regex
 re$-matches( #/a.+/, "abc") ## "abc"
 
@@ -48,11 +51,25 @@ f(x, y) = x + y; f(3,4) ## function def, function call
 
 y = [3, 7, 5] ## vector
 
-{:y -> 7, :b -> 8} ## map
+
+## set
+#{"foo", "bar", "baz", "foo", "dog", "dog", "baz"}
+
+## map
+{"David" 51, "Archer" 11, "Tessa" 2}
+{:y -> 7, :b -> 8}
 
 ## java stuff
+Math::sin(0.5)
+
 `Math/sin(0.5) ## 0.479425538604203
+Math::sin(0.5) ## 0.479425538604203
 `Math/cos(`Math/PI / 3) ##  0.5000000000000001
+Math::cos(`Math/PI / 3) ##  0.5000000000000001
+
+Math::cos(Math::PI / 3) ## expression
+cos_third_pi = Math::cos(Math::PI / 3) ## declaration
+cos_third_pi ## referencing the name
 
 plus_one = x => x + 1; plus_one(3) ## 4
 plus_one(x) = x + 1                ## #'user/plus_one
@@ -72,7 +89,7 @@ calc_tax(income) = income * tax_rate(income)
 
 calc_tax(50000) ## 20000N
 
-## In Visi, there are three constructs: expressions, declarations, and housekeeping.
+
 
 test_income(income) =
   mag = `Math/log10(income) ## the magnitude of the income

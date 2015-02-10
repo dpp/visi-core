@@ -698,6 +698,8 @@
         "end"
         "true"
         "false"
+        "source"
+        "sink"
         ))
 
 (defvar visi-java-words nil "list of Java specific words.")
@@ -841,9 +843,10 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
 (defvar visi-keymap nil "Keybinding for `visi-mode'")
 (progn
   (setq visi-keymap (make-sparse-keymap))
+  (define-key visi-keymap (kbd "C-c C-l") 'visi-load-visi-lib)
   (define-key visi-keymap (kbd "C-x C-e") 'visi-eval-line-or-region)
-  (define-key visi-keymap (kbd "C-x M-c") 'cider-connect)
-  (define-key visi-keymap (kbd "C-x M-j") 'cider-jack-in))
+  (define-key visi-keymap (kbd "C-c M-c") 'cider-connect)
+  (define-key visi-keymap (kbd "C-c M-j") 'cider-jack-in))
 
 
 
