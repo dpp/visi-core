@@ -51,6 +51,9 @@ Or, export to HTML with code and result by 【C-c C-e h h】
  1#seconds + 1.#minutes  +  1.0#hours +  1#days + 100% - 10 ^ 6
 #+END_SRC
 
+#+RESULTS:
+: 8.9061001E7
+
 #+BEGIN_SRC visi :results value :exports both :var xx=3 yy=5
 xx + yy
 #+END_SRC

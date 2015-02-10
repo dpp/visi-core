@@ -52,6 +52,8 @@ URL `http://orgmode.org/manual/Code-block-specific-header-arguments.html#Code-bl
     ;; (print (format "first var is symbol 「%s」" (symbolp (car (car ξtheVars)))))
     ;; (print (format "second var is number 「%s」" (numberp (cdr (car ξtheVars)))))
     ;; (print (concat (symbol-name (car (car ξtheVars))) "=" (number-to-string (cdr (car ξtheVars))) "; "))
+
+    ;; FIXME TODO this won't work if val is a string, not number. Also, refactor the way localVarStr is done. use mapcar then concat to string
     (mapc
      (lambda (varValConsPair)
        (setq

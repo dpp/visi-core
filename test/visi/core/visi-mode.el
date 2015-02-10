@@ -39,18 +39,6 @@
 (add-to-list 'auto-mode-alist '("\\.visi\\'" . visi-mode))
 
 
-;; syntax table
-(defvar visi-syntax-table nil "Syntax table for `visi-mode'.")
-(setq visi-syntax-table
-      (let ((synTable (make-syntax-table )))
-
-        (modify-syntax-entry ?\/ ". 14" synTable)
-        (modify-syntax-entry ?* ". 23" synTable)
-
-        synTable))
-
-
-
 (defvar visi-visi-operators nil "list of Visi operators.")
 (setq visi-visi-operators
       '(
@@ -731,7 +719,8 @@
 ;; TODO add more Visi abbrevs
 (define-abbrev-table 'visi-abbrev-table
   '(
-    ("if" "if(TEST▮, TrueBody, ElseBody)" nil :system t ))
+    ("if" "if(TEST▮, TrueBody, ElseBody)" nil :system t )
+    ("begin" "begin\n ▮\nend" nil :system t ))
 
   "abbrev table for `visi-mode'"
   ;; :regexp "\\_<\\([_-0-9A-Za-z]+\\)"
@@ -748,7 +737,7 @@ This command currently uses emacs CIDER lib to connect to Clojure nREPL."
   (interactive)
   (let ()
     (cider-jack-in)
-    ;; TODO problem now is that nrepl is async. Need to wait for connection to finish before loading visi lib. e.g. write callback, or probably look at process sentinel, see `nrepl-start-server-process', or (nrepl-sync-request:eval …) 
+    ;; TODO problem now is that nrepl is async. Need to wait for connection to finish before loading visi lib. e.g. write callback, or probably look at process sentinel, see `nrepl-start-server-process', or (nrepl-sync-request:eval …)
     ;; (visi-load-visi-lib)
     ;; (add-hook 'nrepl-connected-hook 'visi-load-visi-lib) ;; don't
     ))
@@ -805,24 +794,35 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
     (user-error "No active nREPL connection. Call `visi-repl-connect' first.")))
 
 
+;; keybinding
+
+(defvar visi-keymap nil "Keybinding for `visi-mode'")
+(progn
+  (setq visi-keymap (make-sparse-keymap))
+  (define-key visi-keymap (kbd "C-c C-l") 'visi-load-visi-lib)
+  (define-key visi-keymap (kbd "C-x C-e") 'visi-eval-line-or-region)
+  (define-key visi-keymap (kbd "C-c M-c") 'cider-connect)
+  (define-key visi-keymap (kbd "C-c M-j") 'cider-jack-in))
+
+
 ;; syntax coloring related
 
 (setq visi-font-lock-keywords
       (let (
             (clojureCoreWords (regexp-opt visi-clojure.core-words 'symbols))
             (visiOperators (regexp-opt visi-visi-operators 'symbols))
-            (visiWords (regexp-opt visi-visi-words 'symbols))
-            )
+            (visiWords (regexp-opt visi-visi-words 'symbols)))
         `(
-          ("##.+" . font-lock-comment-face)
-          ("#/\\([^/]+?\\)/" . font-lock-string-face)
+          ;; ("##.+" . font-lock-comment-face)
+          ("#/\\([^/]+?\\)/" . font-lock-string-face) ; regex
           ("#days\\|#seconds\\|#minutes\\|#hours" . font-lock-builtin-face)
-
+          ("[A-Za-z]+::[A-Za-z]+" . font-lock-function-name-face)
+          (":[A-Za-z]+" . font-lock-constant-face)
+          ("[A-Za-z]+:" . font-lock-constant-face)
           (,visiOperators . font-lock-type-face)
           (,visiWords . font-lock-keyword-face)
           (,clojureCoreWords . font-lock-function-name-face)
-          (":[A-Za-z]+" . font-lock-constant-face)
-          ("##" . font-lock-comment-delimiter-face)
+          ;; ("##" . font-lock-comment-delimiter-face)
           )))
 
 ;; font-lock-builtin-face
@@ -841,18 +841,18 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
 ;; font-lock-warning-face
 
 
-;; keybinding
 
-(defvar visi-keymap nil "Keybinding for `visi-mode'")
-(progn
-  (setq visi-keymap (make-sparse-keymap))
-  (define-key visi-keymap (kbd "C-c C-l") 'visi-load-visi-lib)
-  (define-key visi-keymap (kbd "C-x C-e") 'visi-eval-line-or-region)
-  (define-key visi-keymap (kbd "C-c M-c") 'cider-connect)
-  (define-key visi-keymap (kbd "C-c M-j") 'cider-jack-in))
+;; syntax table
+(defvar visi-syntax-table nil "Syntax table for `visi-mode'.")
+(setq visi-syntax-table
+      (let ((synTable (make-syntax-table)))
+
+        (modify-syntax-entry ?\/ ". 14" synTable)
+        (modify-syntax-entry ?* ". 23b" synTable)
+
+        synTable))
 
 
-
 ;; define the mode
 (defun visi-mode ()
   "A major mode for Visi.
@@ -866,7 +866,16 @@ See URL `https://github.com/visicorp/visi-core'
   (setq mode-name "visi")
   (setq major-mode 'visi-mode)
   (set-syntax-table visi-syntax-table)
-  (setq font-lock-defaults '((visi-font-lock-keywords)))
+  (setq font-lock-defaults
+        '((visi-font-lock-keywords)
+          nil
+          nil
+          (
+            ;; (modify-syntax-entry ?# "<" synTable)
+            ;; (modify-syntax-entry ?\n ">" synTable)
+            ("#" . ". 12")
+            ("\n" . ">"))
+          ))
   (use-local-map visi-keymap)
   (setq local-abbrev-table visi-abbrev-table)
 

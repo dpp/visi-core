@@ -1,16 +1,23 @@
 ##################################################
 ## comment
+##
 
 /* C style comment here */
 
 /* C style
-here */
+multiline
+comment
+here
+*/
 
 ##comment
 ## comment
    ## comment
+## comment with string inside "something"
 
-## comment "something". todo.
+## following is not comment
+1#seconds + 1.#minutes
+#{"foo", "bar"}
 
 ##################################################
 ## simple expressions
@@ -62,7 +69,7 @@ end ## 5
 ## simple data types
 
 ## vector
-y = [3, "b", 5] 
+y = [3, "b", 5]
 
 ## set
 #{"foo", "bar", "baz", "foo", "dog", "dog", "baz"}
@@ -90,7 +97,6 @@ Math::cos(`Math/PI / 3) ##  0.5000000000000001
 
 Math::cos(Math::PI / 3) ## expression
 cos_third_pi = Math::cos(Math::PI / 3) ## declaration
-cos_third_pi ## referencing the name
 
 ## regex
 re$-matches( #/a.+/, "abc") ## "abc"
@@ -124,7 +130,9 @@ test_income(income) =
 
 test_income(5000) ## "med"
 
+##################################################
 ## Functions and Big Data
+
 ##Let's look at an example of computing the average of a collection of numbers using map/reduce:
 
 data = [1000, 10, 250000, 33]
@@ -139,7 +147,7 @@ reduced = reduce((acc, data) =>
 
 average = reduced.sum / reduced.cnt
 
-##The above code applies the "identity" function to each element in the set. The identity function returns the same value it took. So, the mapping phase results in the same collection that was input.
+## The above code applies the "identity" function to each element in the set. The identity function returns the same value it took. So, the mapping phase results in the same collection that was input.
 
 data = [1000, 10, 250000, 33] ## The data set
 
