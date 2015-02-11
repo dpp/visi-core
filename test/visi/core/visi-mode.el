@@ -27,9 +27,9 @@
 ;; • improve doc on how to use/setup
 ;; • add/improve inline doc to all functions.
 ;; • consider using https://github.com/sanel/monroe as nrepl backend instead of CIDER
-
-;; • 2015-02-09 regex based syntax coloring for this [{name: "David", type: "Human", age: 51}, {name: "Archer", type: "Dog", age: 11}, {name: "Tessa", type: "Cat", age: 2}]
-;; • 2015-02-09 regex based syntax coloring for package related stuff. ⁖  「Math::cos(Math::PI / 3)」, 「re$-matches( #/a.+/, "abc")」
+;; • 2015-02-10 visi syntax for {regex, string} literal, allow many variations. Refine to support all correctly.
+;; • 2015-02-10 refine regex based syntax coloring for {package, namespace, java/clojure interopr} related syntax. ⁖  name::name, $.methodName, etc.
+;; • 2015-02-10 find out if {name -> some} is still supported, and in general, Visi's syntax for associative array. Also, keywords, eg 「:name」, 「name:」
 
 (require 'cider)
 (require 'newcomment)
@@ -815,10 +815,14 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
         `(
           ;; ("##.+" . font-lock-comment-face)
           ("#/\\([^/]+?\\)/" . font-lock-string-face) ; regex
+          ;; ("#\\('{2,}\\)\\(.+?\\)\\1" . font-lock-string-face) ; string literal
+          ("#'''\\(.+?\\)'''" . font-lock-string-face) ; string literal
           ("#days\\|#seconds\\|#minutes\\|#hours" . font-lock-builtin-face)
           ("[A-Za-z]+::[A-Za-z]+" . font-lock-function-name-face)
           (":[A-Za-z]+" . font-lock-constant-face)
           ("[A-Za-z]+:" . font-lock-constant-face)
+          ("\\([_A-Za-z]+\\)(" . (1 font-lock-function-name-face))
+          ("\\([_A-Za-z]+\\) *=[^=>]" . (1 font-lock-variable-name-face))
           (,visiOperators . font-lock-type-face)
           (,visiWords . font-lock-keyword-face)
           (,clojureCoreWords . font-lock-function-name-face)
@@ -876,6 +880,9 @@ See URL `https://github.com/visicorp/visi-core'
             ("#" . ". 12")
             ("\n" . ">"))
           ))
+
+;; syntax-begin-function
+
   (use-local-map visi-keymap)
   (setq local-abbrev-table visi-abbrev-table)
 

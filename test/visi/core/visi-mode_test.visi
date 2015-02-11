@@ -49,6 +49,19 @@ end
 ## string join
 "this" & "that"
 
+## string literal
+#'''some thing'''
+#'''he's good'''
+#'''he said "some"'''
+#''some thing''
+#''''some thing''''
+
+#"""some thing"""
+#"""he's good"""
+#"""he said "some""""
+#""some thing""
+#"""'some thing"""'
+
 ## merge
 {"a" -> 7, "b" -> 8, "c" -> 9 } %% {"x" -> 3, "b" -> 2 }
 x = {"a" -> 7, "b" -> 8, "c" -> 9 }; y = {"x" -> 3, "b" -> 2 }; x %% y
@@ -75,6 +88,7 @@ y = [3, "b", 5]
 #{"foo", "bar", "baz", "foo", "dog", "dog", "baz"}
 
 ## key/value pair, association list
+
 {"David" 51, "Archer" 11, "Tessa" 2}
 {:y -> 7, :b -> 8} ## ?
 
@@ -85,7 +99,7 @@ y = [3, "b", 5]
  {name: "Tessa", type: "Cat", age: 2}]
 
 ##################################################
-## package, namespace, related
+## package, namespace, java, related
 ## Todo: add namespace stuff. check `name $name .name
 
 Math::sin(0.5)
@@ -100,6 +114,9 @@ cos_third_pi = Math::cos(Math::PI / 3) ## declaration
 
 ## regex
 re$-matches( #/a.+/, "abc") ## "abc"
+
+toString([1, 2, 3])
+$.toString($.size([1, 2, 3]))
 
 ##################################################
 ## function def, function call
