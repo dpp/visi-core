@@ -49,18 +49,38 @@ end
 ## string join
 "this" & "that"
 
+##################################################
 ## string literal
+
+#''some thing''
+#''he's good''
+#''he said "some"''
+
 #'''some thing'''
 #'''he's good'''
 #'''he said "some"'''
-#''some thing''
+
 #''''some thing''''
+#''''he's good''''
+#''''he said "some"''''
+
+#""some thing""
+#""he's good""
+#""he said "some"""
 
 #"""some thing"""
 #"""he's good"""
 #"""he said "some""""
-#""some thing""
-#"""'some thing"""'
+
+#""""some thing""""
+#""""he's good""""
+#""""he said "some"""""
+
+##################################################
+## regex
+re$-matches( #/a.+/, "abc") ## "abc"
+re$-matches( #//a.+//, "abc") ## "abc"
+re$-matches( #///a.+///, "abc") ## "abc"
 
 ## merge
 {"a" -> 7, "b" -> 8, "c" -> 9 } %% {"x" -> 3, "b" -> 2 }
@@ -111,9 +131,6 @@ Math::cos(`Math/PI / 3) ##  0.5000000000000001
 
 Math::cos(Math::PI / 3) ## expression
 cos_third_pi = Math::cos(Math::PI / 3) ## declaration
-
-## regex
-re$-matches( #/a.+/, "abc") ## "abc"
 
 toString([1, 2, 3])
 $.toString($.size([1, 2, 3]))

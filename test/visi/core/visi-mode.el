@@ -19,15 +19,13 @@
 ;; After Cider is ready (you'll see a buffer popping up with prompt), call `visi-load-visi-lib'. Wait a few seconds for visi lib to load
 ;; Call `visi-eval-line-or-region' to eval.
 
-;; 2015-02-07 things to do
-
+;; TODO
 ;; • 2015-02-07 eliminate visi-load-visi-lib step. can be done by (nrepl-sync-request:eval …)
 ;; • 2015-01-27 possibly need to escape backslash. try regex ⁖  「re$-matches( #/a.+/, "abc")」 with lots slash or backslash and also contain double quotes. Solution, base64 encode it. See (visi.core.runtime/as-string (visi.core.parser/parse-and-eval-multiline (visi.core.util/decode-base64 \"%s\"))) in ob-visi.el
 ;; • make/enhance the syntax coloring syntax based (instead of just inert keywords)
 ;; • improve doc on how to use/setup
 ;; • add/improve inline doc to all functions.
 ;; • consider using https://github.com/sanel/monroe as nrepl backend instead of CIDER
-;; • 2015-02-10 visi syntax for {regex, string} literal, allow many variations. Refine to support all correctly.
 ;; • 2015-02-10 refine regex based syntax coloring for {package, namespace, java/clojure interopr} related syntax. ⁖  name::name, $.methodName, etc.
 ;; • 2015-02-10 find out if {name -> some} is still supported, and in general, Visi's syntax for associative array. Also, keywords, eg 「:name」, 「name:」
 
@@ -813,10 +811,9 @@ To eval Clojure code, call `cider-eval-last-sexp', `cider-eval-region' etc."
             (visiOperators (regexp-opt visi-visi-operators 'symbols))
             (visiWords (regexp-opt visi-visi-words 'symbols)))
         `(
-          ;; ("##.+" . font-lock-comment-face)
-          ("#/\\([^/]+?\\)/" . font-lock-string-face) ; regex
-          ;; ("#\\('{2,}\\)\\(.+?\\)\\1" . font-lock-string-face) ; string literal
-          ("#'''\\(.+?\\)'''" . font-lock-string-face) ; string literal
+          ("#\\(/\\{1,10\\}\\)\\(.+?\\)\\1" . font-lock-string-face) ; regex
+          ("#\\('\\{2,10\\}\\)\\(.+?\\)\\1" . (0 font-lock-string-face t)) ; string literal
+          ("#\\(\"\\{2,10\\}\\)\\(.+?\\)\\1" . (0 font-lock-string-face t)) ; string literal
           ("#days\\|#seconds\\|#minutes\\|#hours" . font-lock-builtin-face)
           ("[A-Za-z]+::[A-Za-z]+" . font-lock-function-name-face)
           (":[A-Za-z]+" . font-lock-constant-face)
