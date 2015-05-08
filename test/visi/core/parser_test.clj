@@ -70,7 +70,16 @@
     (t/is (= (vp/parse-for-tests "p40689:") :p40689)))
 
   (t/testing
-   "Test StringLit." ; todo, test all the backslash special case
+      "Test StringLit." ; todo, test all the backslash special case
+    ;; string literal syntax is 「"…"」
+    ;; and also the following special forms
+    ;; 「#""…""」
+    ;; 「#"""…"""」
+    ;; 「#''…''」
+    ;; 「#'''…'''」
+    ;; 「#^^…^^」
+    ;; 「#^^^…^^^」
+    ;; there must be 2 or more of the same delimiters in the beginning. Delimiter count at the end must be the same as beginning.
 
     (t/is (= (vp/parse-for-tests "\"3\"") "3"))
     (t/is (=
@@ -90,19 +99,35 @@ moose' cats'' "))
           "foo\"dog\nmoose' cats"
           )
 
+    (t/is (=
+           (vp/parse-for-tests "#'''h''\"^^\"^^'''")
+           "h''\"^^\"^^")
+          )
+
     (t/is (= (vp/parse-for-tests "\"😸\"") '"😸")); unicode beyond BMP
-)
-
-
-
+    )
 
   (t/testing
-   "Test RegexLit"
-    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/a.+/, \"abc\")") "abc"))
-    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/a/, \"b\")") nil))
-    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/.文/, \"中文\")") "中文"))
+      "Test RegexLit"
+    ;; regex syntax is this: 「#/‹regex›/」
+    ;; the slash can be more than one, and the number of slashes in the end must be the same as beginning
+    ;; the slash can also be underscore _ or vertical bar |
+    (t/is (=
+           (vp/parse-and-eval-for-tests "re_matches( #/a.+/, \"abc\")")
+           (vp/parse-and-eval-for-tests "re_matches( #//a.+//, \"abc\")")
+           (vp/parse-and-eval-for-tests "re_matches( #///a.+///, \"abc\")")
+           "abc"))
 
-    (t/is (= (vp/parse-and-eval-for-tests "re_seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x"))))
+    (t/is (=
+           (vp/parse-and-eval-for-tests "re_matches( #_a.+_, \"abc\")")
+           (vp/parse-and-eval-for-tests "re_matches( #__a.+__, \"abc\")")
+           "abc"))
+
+    (t/is (= (vp/parse-and-eval-for-tests "re_seq(#|t|, \"atatat\")") '("t" "t" "t")))
+    (t/is (= (vp/parse-and-eval-for-tests "re_seq(#||x/*x||, \"||I like x//x, dude\")") (list  "x//x")))
+    
+    (t/is (= (vp/parse-and-eval-for-tests "re_matches( #/.文/, \"中文\")") "中文"))
+    )
 
   (t/testing
    "Test operators OprExpression"
