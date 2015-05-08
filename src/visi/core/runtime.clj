@@ -107,6 +107,7 @@
 
 
 (defprotocol TransformInfo
+  (ti-do-source [this name])
   (ti-do-sink [this name])
   (ti-aggregate [this zero-value seq-op comb-op])
   (ti-aggregate-by-key [this zero-value seq-op comb-op])
