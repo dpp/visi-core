@@ -221,24 +221,24 @@ moose' cats'' "))
     (t/is (= (vp/parse-for-tests "begin
  4
 end")
-             '(do 4)))
+             4))
 
     (t/is (= (vp/parse-for-tests "begin
  4;
 end")
-             '(do 4)))
+             4))
 
     (t/is (= (vp/parse-for-tests "begin
  4;
  7;
 end")
-             '(do 4 7)))
+             7 ))
 
     (t/is (= (vp/parse-for-tests "begin
     x = 4
     x + 1
 end")
-             '(do (let* [x 4] (clojure.lang.Numbers/add x 1))))))
+             '(let* [x 4] (clojure.lang.Numbers/add x 1)) )))
 
   (t/testing
    "Test LineComment."
@@ -387,7 +387,7 @@ end")
                '(let* [it x]
                       (if (clojure.core/map? it)
                         (clojure.lang.RT/get it :y)
-                        (.y it)))))
+                        (. it y)))))
 
       (t/is (=
              (vp/parse-and-eval-for-tests "x = {y: -> 7}; x .y")
@@ -532,7 +532,7 @@ end")
       (t/is
        (=
         (vp/parse-for-tests ".x")
-        '(fn* ([it] (if (clojure.core/map? it) (clojure.lang.RT/get it :x) (.x it))))))
+        '(fn* ([it] (if (clojure.core/map? it) (clojure.lang.RT/get it :x) (. it x))))))
 
       (t/is (= (vp/parse-for-tests "$.dogmeat(4, 5)") '(.dogmeat 4 5)))
       (t/is (= (vp/parse-for-tests "dogmeat(4, 5)") '(.dogmeat 4 5)))
@@ -791,7 +791,7 @@ end")
                (let* [it x]
                      (if (clojure.core/map? it)
                        (clojure.lang.RT/get it :y)
-                       (.y it)))
+                       (. it y)))
                b)))
 
     (t/is (= (vp/parse-for-tests "x/y/z" 'x 'y 'z)
